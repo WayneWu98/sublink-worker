@@ -1,5 +1,5 @@
 import { generateWebPath } from '../utils.js';
-import { MissingDependencyError } from './errors.js';
+import { MissingDependencyError, TokenMismatchError } from './errors.js';
 
 export class ShortLinkService {
     constructor(kv, options = {}) {
@@ -58,8 +58,10 @@ export class ShortLinkService {
                 await this.writeEntry(code, queryString, existing.t);
                 return { code, token: existing.t };
             }
-            // Mismatch cases implemented in Task 6
-            throw new Error('unreachable — token mismatch handling not yet implemented');
+            if (!providedToken) {
+                throw new TokenMismatchError('A token is required to overwrite this short link', 'missing');
+            }
+            throw new TokenMismatchError('Provided token does not match this short link', 'mismatch');
         }
 
         // Legacy-claim branch implemented in Task 7

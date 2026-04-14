@@ -91,3 +91,31 @@ describe('ShortLinkService.createShortLink — overwrite with correct token', ()
         expect(stored).toEqual({ q: '?url=v2', t: first.token });
     });
 });
+
+describe('ShortLinkService.createShortLink — overwrite auth failures', () => {
+    it('throws TokenMismatchError(reason=missing) when no token provided', async () => {
+        const kv = new MemoryKVAdapter();
+        const svc = new ShortLinkService(kv);
+        const first = await svc.createShortLink('?url=v1', 'foo', null);
+        await expect(svc.createShortLink('?url=v2', 'foo', null))
+            .rejects.toMatchObject({ name: 'TokenMismatchError', reason: 'missing', status: 403 });
+        const stored = JSON.parse(await kv.get('foo'));
+        expect(stored).toEqual({ q: '?url=v1', t: first.token });
+    });
+
+    it('throws TokenMismatchError(reason=mismatch) when wrong token provided', async () => {
+        const kv = new MemoryKVAdapter();
+        const svc = new ShortLinkService(kv);
+        await svc.createShortLink('?url=v1', 'foo', null);
+        await expect(svc.createShortLink('?url=v2', 'foo', 'not-the-token'))
+            .rejects.toMatchObject({ name: 'TokenMismatchError', reason: 'mismatch', status: 403 });
+    });
+
+    it('throws TokenMismatchError(reason=missing) for empty-string token', async () => {
+        const kv = new MemoryKVAdapter();
+        const svc = new ShortLinkService(kv);
+        await svc.createShortLink('?url=v1', 'foo', null);
+        await expect(svc.createShortLink('?url=v2', 'foo', ''))
+            .rejects.toMatchObject({ name: 'TokenMismatchError', reason: 'missing' });
+    });
+});
