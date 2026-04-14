@@ -104,6 +104,8 @@ export const formLogicFn = (t) => {
             shortenedLinks: null,
             shortening: false,
             customShortCode: '',
+            shortCodeToken: '',
+            issuedShortCodeToken: '',
             parsingUrl: false,
             parseDebounceTimer: null,
             // These will be populated from window.APP_TRANSLATIONS
@@ -347,6 +349,8 @@ export const formLogicFn = (t) => {
                     this.generatedLinks = null;
                     this.shortenedLinks = null;
                     this.customShortCode = '';
+                    this.shortCodeToken = '';
+                    this.issuedShortCodeToken = '';
                     // Also clear from localStorage
                     localStorage.removeItem('customShortCode');
                 }
@@ -417,12 +421,10 @@ export const formLogicFn = (t) => {
             },
 
             async shortenLinks() {
-                // Check if links are already shortened
                 if (this.shortenedLinks) {
                     alert(window.APP_TRANSLATIONS.alreadyShortened);
                     return;
                 }
-
                 if (!this.generatedLinks) {
                     return;
                 }
@@ -430,51 +432,39 @@ export const formLogicFn = (t) => {
                 this.shortening = true;
                 try {
                     const origin = window.location.origin;
-                    const shortened = {};
+                    // All 4 types (singbox/clash/xray/surge) share the same query string,
+                    // so a single backend call is enough. Prefixes are applied locally.
+                    const firstType = Object.keys(this.generatedLinks)[0];
+                    const representativeUrl = this.generatedLinks[firstType];
+                    const customCode = this.customShortCode.trim();
+                    const providedToken = this.shortCodeToken.trim();
 
-                    // Use custom short code if provided, otherwise let backend generate it once
-                    let shortCode = this.customShortCode.trim();
-                    let isFirstRequest = true;
-
-                    // Shorten each link type
-                    for (const [type, url] of Object.entries(this.generatedLinks)) {
-                        try {
-                            let apiUrl = `${origin}/shorten-v2?url=${encodeURIComponent(url)}`;
-
-                            // For the first request, either use custom code or let backend generate
-                            // For subsequent requests, use the code from first request
-                            if (shortCode) {
-                                apiUrl += `&shortCode=${encodeURIComponent(shortCode)}`;
-                            }
-
-                            const response = await fetch(apiUrl);
-                            if (!response.ok) {
-                                throw new Error(`Failed to shorten ${type} link`);
-                            }
-                            const returnedCode = await response.text();
-
-                            // If this is the first request and no custom code was provided,
-                            // use the backend-generated code for all subsequent requests
-                            if (isFirstRequest && !shortCode) {
-                                shortCode = returnedCode;
-                            }
-                            isFirstRequest = false;
-
-                            // Map types to their corresponding path prefixes
-                            const prefixMap = {
-                                xray: 'x',
-                                singbox: 'b',
-                                clash: 'c',
-                                surge: 's'
-                            };
-
-                            shortened[type] = `${origin}/${prefixMap[type]}/${returnedCode}`;
-                        } catch (error) {
-                            console.error(`Error shortening ${type} link:`, error);
-                            throw error;
-                        }
+                    let apiUrl = origin + '/shorten-v2?url=' + encodeURIComponent(representativeUrl);
+                    if (customCode) {
+                        apiUrl += '&shortCode=' + encodeURIComponent(customCode);
+                    }
+                    const headers = {};
+                    if (providedToken) {
+                        headers['X-Shortlink-Token'] = providedToken;
                     }
 
+                    const response = await fetch(apiUrl, { headers });
+                    const body = await response.json().catch(() => ({}));
+
+                    if (!response.ok) {
+                        const msg = body.error || window.APP_TRANSLATIONS.shortenFailed;
+                        alert(msg);
+                        return;
+                    }
+
+                    const { code, token } = body;
+                    this.issuedShortCodeToken = token;
+
+                    const prefixMap = { singbox: 'b', clash: 'c', xray: 'x', surge: 's' };
+                    const shortened = {};
+                    for (const type of Object.keys(this.generatedLinks)) {
+                        shortened[type] = origin + '/' + prefixMap[type] + '/' + code;
+                    }
                     this.shortenedLinks = shortened;
                 } catch (error) {
                     console.error('Error shortening links:', error);

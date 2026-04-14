@@ -100,6 +100,17 @@ This project is for learning and exchange purposes only. Please do not use it fo
   <p>If you would like to sponsor this project, please contact the developer <a href="https://github.com/7Sageer" style="text-decoration: none;">@7Sageer</a></p>
 </div>
 
+## 🔐 Short Link Token Authentication (v2.5+)
+
+As of v2.5, the `/shorten-v2` endpoint:
+
+- **Response is now JSON** (previously `text/plain`). Shape: `{ "code": "<shortcode>", "token": "<32-hex-token>" }`.
+- **Overwriting an existing short code requires** sending the `X-Shortlink-Token: <token>` header. The token is returned exactly once, on creation — save it.
+- **Legacy short links** (created before this version) are tokenless. The first caller who references such a short code will claim it and receive a fresh token; after that, subsequent overwrites require that token.
+- **403 responses** (JSON `{ error, reason }` with `reason` being `missing` or `mismatch`) are returned when authorization fails.
+
+Migration: external scripts that read `/shorten-v2` response as text must parse JSON and handle the new `token` field.
+
 ## ⭐ Star History
 
 Thanks to everyone who has starred this project! 🌟
