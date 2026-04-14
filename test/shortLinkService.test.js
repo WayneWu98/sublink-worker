@@ -140,3 +140,25 @@ describe('ShortLinkService.createShortLink — legacy claim', () => {
         expect(result.token).not.toBe('random-input');
     });
 });
+
+describe('ShortLinkService.resolveShortCode', () => {
+    it('returns the raw query string for legacy entries', async () => {
+        const kv = new MemoryKVAdapter();
+        await kv.put('foo', '?legacy=1');
+        const svc = new ShortLinkService(kv);
+        expect(await svc.resolveShortCode('foo')).toBe('?legacy=1');
+    });
+
+    it('returns the query string for new-format entries (strips JSON wrapper)', async () => {
+        const kv = new MemoryKVAdapter();
+        const svc = new ShortLinkService(kv);
+        await svc.createShortLink('?url=v1', 'foo', null);
+        expect(await svc.resolveShortCode('foo')).toBe('?url=v1');
+    });
+
+    it('returns null for missing entries', async () => {
+        const kv = new MemoryKVAdapter();
+        const svc = new ShortLinkService(kv);
+        expect(await svc.resolveShortCode('does-not-exist')).toBeNull();
+    });
+});
