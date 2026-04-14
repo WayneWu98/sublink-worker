@@ -39,13 +39,28 @@ export class ShortLinkService {
         return JSON.stringify({ q, t });
     }
 
-    async createShortLink(queryString, providedCode) {
+    async createShortLink(queryString, providedCode, providedToken) {
         const kv = this.ensureKv();
-        const shortCode = providedCode || generateWebPath();
+        const code = providedCode || generateWebPath();
+        const existingRaw = await kv.get(code);
+        const existing = this.parseStoredValue(existingRaw);
+
+        // Case: fresh create (no existing entry)
+        if (existing === null) {
+            const token = this.generateToken();
+            await this.writeEntry(code, queryString, token);
+            return { code, token };
+        }
+
+        // Cases for existing entries — implemented in later tasks.
+        throw new Error('unreachable — existing entry handling not yet implemented');
+    }
+
+    async writeEntry(code, queryString, token) {
+        const kv = this.ensureKv();
         const ttl = this.options.shortLinkTtlSeconds;
         const putOptions = ttl ? { expirationTtl: ttl } : undefined;
-        await kv.put(shortCode, queryString, putOptions);
-        return shortCode;
+        await kv.put(code, this.serialize(queryString, token), putOptions);
     }
 
     async resolveShortCode(code) {

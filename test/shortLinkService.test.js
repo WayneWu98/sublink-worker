@@ -54,3 +54,27 @@ describe('ShortLinkService.serialize', () => {
         expect(svc.serialize('?x=1', 'abc')).toBe(JSON.stringify({ q: '?x=1', t: 'abc' }));
     });
 });
+
+describe('ShortLinkService.createShortLink — fresh create', () => {
+    it('generates code+token and stores new-format JSON when no shortCode given', async () => {
+        const kv = new MemoryKVAdapter();
+        const svc = new ShortLinkService(kv);
+        const result = await svc.createShortLink('?url=abc', null, null);
+        expect(result).toHaveProperty('code');
+        expect(result).toHaveProperty('token');
+        expect(result.code).toMatch(/^[A-Za-z0-9]{7}$/);
+        expect(result.token).toMatch(/^[0-9a-f]{32}$/);
+        const stored = await kv.get(result.code);
+        expect(JSON.parse(stored)).toEqual({ q: '?url=abc', t: result.token });
+    });
+
+    it('accepts a fresh custom shortCode', async () => {
+        const kv = new MemoryKVAdapter();
+        const svc = new ShortLinkService(kv);
+        const result = await svc.createShortLink('?url=abc', 'foo', null);
+        expect(result.code).toBe('foo');
+        expect(result.token).toMatch(/^[0-9a-f]{32}$/);
+        const stored = await kv.get('foo');
+        expect(JSON.parse(stored)).toEqual({ q: '?url=abc', t: result.token });
+    });
+});
