@@ -14,6 +14,12 @@ export class ShortLinkService {
         return this.kv;
     }
 
+    generateToken() {
+        const bytes = new Uint8Array(16);
+        crypto.getRandomValues(bytes);
+        return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+    }
+
     async createShortLink(queryString, providedCode) {
         const kv = this.ensureKv();
         const shortCode = providedCode || generateWebPath();
