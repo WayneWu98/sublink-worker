@@ -34,6 +34,11 @@ export const Form = (props) => {
     customShortCode: t('customShortCode'),
     optional: t('optional'),
     customShortCodePlaceholder: t('customShortCodePlaceholder'),
+    shortCodeToken: t('shortCodeToken'),
+    shortCodeTokenPlaceholder: t('shortCodeTokenPlaceholder'),
+    shortCodeTokenHelp: t('shortCodeTokenHelp'),
+    shortCodeTokenIssuedTitle: t('shortCodeTokenIssuedTitle'),
+    shortCodeTokenIssuedHelp: t('shortCodeTokenIssuedHelp'),
     showFullLinks: t('showFullLinks')
   };
 
@@ -399,6 +404,20 @@ class="px-6 py-3.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 bo
               class="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 text-center"
             />
           </div>
+          <div class="w-full max-w-md">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-center">
+              {t('shortCodeToken')} <span class="text-gray-400">({t('optional')})</span>
+            </label>
+            <input
+              type="text"
+              x-model="shortCodeToken"
+              placeholder={t('shortCodeTokenPlaceholder')}
+              class="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 text-center font-mono text-sm"
+            />
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center">
+              {t('shortCodeTokenHelp')}
+            </p>
+          </div>
         </div>
         <div class="flex justify-center mt-4">
           <button
@@ -418,6 +437,33 @@ class="px-6 py-3.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 bo
               x-text="shortenedLinks ? showFullLinksText : (shortening ? shorteningText : shortenLinksText)"
             ></span>
           </button>
+        </div>
+
+        {/* Issued token display: only appears after a successful shorten with a token */}
+        <div x-show="issuedShortCodeToken" class="mt-6 max-w-2xl mx-auto">
+          <div class="bg-amber-50 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 rounded-lg p-4">
+            <p class="text-sm font-medium text-amber-900 dark:text-amber-100 mb-2">
+              {t('shortCodeTokenIssuedTitle')}
+            </p>
+            <p class="text-xs text-amber-800 dark:text-amber-200 mb-3">
+              {t('shortCodeTokenIssuedHelp')}
+            </p>
+            <div class="flex items-center gap-2">
+              <input
+                type="text"
+                x-bind:value="issuedShortCodeToken"
+                readonly
+                class="flex-1 px-3 py-2 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono text-sm select-all"
+              />
+              <button
+                type="button"
+                x-on:click="navigator.clipboard.writeText(issuedShortCodeToken); copied = 'token'; setTimeout(() => copied = '', 1500)"
+                class="px-3 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white transition-colors"
+              >
+                <i class="fas" x-bind:class="copied === 'token' ? 'fa-check' : 'fa-copy'"></i>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
