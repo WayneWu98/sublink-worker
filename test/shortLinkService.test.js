@@ -119,3 +119,24 @@ describe('ShortLinkService.createShortLink — overwrite auth failures', () => {
             .rejects.toMatchObject({ name: 'TokenMismatchError', reason: 'missing' });
     });
 });
+
+describe('ShortLinkService.createShortLink — legacy claim', () => {
+    it('upgrades a legacy (tokenless) entry with a fresh token regardless of input token', async () => {
+        const kv = new MemoryKVAdapter();
+        await kv.put('foo', '?legacy=yes');
+        const svc = new ShortLinkService(kv);
+        const result = await svc.createShortLink('?url=new', 'foo', null);
+        expect(result.code).toBe('foo');
+        expect(result.token).toMatch(/^[0-9a-f]{32}$/);
+        const stored = JSON.parse(await kv.get('foo'));
+        expect(stored).toEqual({ q: '?url=new', t: result.token });
+    });
+
+    it('claim ignores any provided token (legacy has no token to match)', async () => {
+        const kv = new MemoryKVAdapter();
+        await kv.put('foo', '?legacy=yes');
+        const svc = new ShortLinkService(kv);
+        const result = await svc.createShortLink('?url=new', 'foo', 'random-input');
+        expect(result.token).not.toBe('random-input');
+    });
+});

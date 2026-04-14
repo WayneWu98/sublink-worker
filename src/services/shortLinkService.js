@@ -64,8 +64,10 @@ export class ShortLinkService {
             throw new TokenMismatchError('Provided token does not match this short link', 'mismatch');
         }
 
-        // Legacy-claim branch implemented in Task 7
-        throw new Error('unreachable — legacy claim not yet implemented');
+        // Legacy entry: first caller claims it with a newly minted token
+        const token = this.generateToken();
+        await this.writeEntry(code, queryString, token);
+        return { code, token };
     }
 
     async writeEntry(code, queryString, token) {
