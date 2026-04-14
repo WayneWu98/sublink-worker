@@ -304,20 +304,25 @@ export function createApp(bindings = {}) {
         try {
             const url = c.req.query('url');
             if (!url) {
-                return c.text('Missing URL parameter', 400);
+                return c.json({ error: 'Missing URL parameter' }, 400);
             }
             let parsedUrl;
             try {
                 parsedUrl = new URL(url);
             } catch {
-                return c.text('Invalid URL parameter', 400);
+                return c.json({ error: 'Invalid URL parameter' }, 400);
             }
             const queryString = parsedUrl.search;
 
             const shortLinks = requireShortLinkService(services.shortLinks);
-            const code = await shortLinks.createShortLink(queryString, c.req.query('shortCode'));
-            return c.text(code);
+            const providedCode = c.req.query('shortCode');
+            const providedToken = getRequestHeader(c.req, 'X-Shortlink-Token') || null;
+            const { code, token } = await shortLinks.createShortLink(queryString, providedCode, providedToken);
+            return c.json({ code, token });
         } catch (error) {
+            if (error && error.name === 'TokenMismatchError') {
+                return c.json({ error: error.message, reason: error.reason }, 403);
+            }
             return handleError(c, error, runtime.logger);
         }
     });
