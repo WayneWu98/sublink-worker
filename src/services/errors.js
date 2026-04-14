@@ -19,3 +19,11 @@ export class InvalidPayloadError extends ServiceError {
         this.name = 'InvalidPayloadError';
     }
 }
+
+export class TokenMismatchError extends ServiceError {
+    constructor(message = 'Token mismatch', reason = 'mismatch') {
+        super(message, 403);
+        this.name = 'TokenMismatchError';
+        this.reason = reason;
+    }
+}
