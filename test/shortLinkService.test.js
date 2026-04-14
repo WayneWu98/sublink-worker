@@ -23,3 +23,34 @@ describe('ShortLinkService.generateToken', () => {
         expect(a).not.toBe(b);
     });
 });
+
+describe('ShortLinkService.parseStoredValue', () => {
+    const svc = new ShortLinkService(new MemoryKVAdapter());
+
+    it('returns null for null/undefined/empty', () => {
+        expect(svc.parseStoredValue(null)).toBeNull();
+        expect(svc.parseStoredValue(undefined)).toBeNull();
+        expect(svc.parseStoredValue('')).toBeNull();
+    });
+
+    it('treats a raw query string (starts with ?) as legacy, no token', () => {
+        expect(svc.parseStoredValue('?config=abc')).toEqual({ q: '?config=abc', t: null, legacy: true });
+    });
+
+    it('parses new-format JSON into { q, t }', () => {
+        const raw = JSON.stringify({ q: '?x=1', t: 'abc' });
+        expect(svc.parseStoredValue(raw)).toEqual({ q: '?x=1', t: 'abc', legacy: false });
+    });
+
+    it('treats malformed JSON starting with { as legacy (defensive)', () => {
+        expect(svc.parseStoredValue('{not-json')).toEqual({ q: '{not-json', t: null, legacy: true });
+    });
+});
+
+describe('ShortLinkService.serialize', () => {
+    const svc = new ShortLinkService(new MemoryKVAdapter());
+
+    it('stores q and t as a JSON object', () => {
+        expect(svc.serialize('?x=1', 'abc')).toBe(JSON.stringify({ q: '?x=1', t: 'abc' }));
+    });
+});
