@@ -52,8 +52,18 @@ export class ShortLinkService {
             return { code, token };
         }
 
-        // Cases for existing entries — implemented in later tasks.
-        throw new Error('unreachable — existing entry handling not yet implemented');
+        // Existing new-format entry: verify token
+        if (!existing.legacy) {
+            if (providedToken && providedToken === existing.t) {
+                await this.writeEntry(code, queryString, existing.t);
+                return { code, token: existing.t };
+            }
+            // Mismatch cases implemented in Task 6
+            throw new Error('unreachable — token mismatch handling not yet implemented');
+        }
+
+        // Legacy-claim branch implemented in Task 7
+        throw new Error('unreachable — legacy claim not yet implemented');
     }
 
     async writeEntry(code, queryString, token) {

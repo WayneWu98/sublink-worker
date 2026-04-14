@@ -78,3 +78,16 @@ describe('ShortLinkService.createShortLink — fresh create', () => {
         expect(JSON.parse(stored)).toEqual({ q: '?url=abc', t: result.token });
     });
 });
+
+describe('ShortLinkService.createShortLink — overwrite with correct token', () => {
+    it('overwrites the query string and keeps the same token', async () => {
+        const kv = new MemoryKVAdapter();
+        const svc = new ShortLinkService(kv);
+        const first = await svc.createShortLink('?url=v1', 'foo', null);
+        const second = await svc.createShortLink('?url=v2', 'foo', first.token);
+        expect(second.code).toBe('foo');
+        expect(second.token).toBe(first.token);
+        const stored = JSON.parse(await kv.get('foo'));
+        expect(stored).toEqual({ q: '?url=v2', t: first.token });
+    });
+});
