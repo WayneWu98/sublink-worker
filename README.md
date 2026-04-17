@@ -111,6 +111,17 @@ As of v2.5, the `/shorten-v2` endpoint:
 
 Migration: external scripts that read `/shorten-v2` response as text must parse JSON and handle the new `token` field.
 
+## 🔐 Short Code Loader + Read Authentication (v2.6+)
+
+Building on v2.5's token system:
+
+- **New UI entry point**: a "Load from Code" button appears to the left of Paste/Clear on the main input. It opens a modal accepting a short code and optional token, then loads the original subscription configuration back into the form and captures the token so a subsequent "Shorten" call overwrites the same short code.
+- **`/resolve` is now conditionally authenticated**: entries created under v2.5+ require the matching `X-Shortlink-Token` header. Missing token → 401 (reason `missing`). Wrong token → 403 (reason `mismatch`). Legacy entries (created before v2.5) remain anonymously readable.
+- **Auto-parse of pasted short URLs has been removed**. Pasting a short URL (e.g. `https://<host>/b/<code>`) into the main input textarea no longer fetches and populates the form. Use the new "Load from Code" button instead.
+- **`/b/:code`, `/c/:code`, `/x/:code`, `/s/:code` redirect endpoints are unchanged** — they continue to resolve anonymously so existing short links on the open internet keep working.
+
+Migration: any external tooling that called `/resolve` on a new-format short code must now supply `X-Shortlink-Token`.
+
 ## ⭐ Star History
 
 Thanks to everyone who has starred this project! 🌟
