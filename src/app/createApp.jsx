@@ -380,11 +380,21 @@ export function createApp(bindings = {}) {
             if (!['b', 'c', 'x', 's'].includes(prefix)) return c.text(t('invalidShortUrl'), 400);
 
             const shortLinks = requireShortLinkService(services.shortLinks);
-            const originalParam = await shortLinks.resolveShortCode(shortCode);
-            if (!originalParam) return c.text(t('shortUrlNotFound'), 404);
+            const entry = await shortLinks.resolveShortCodeEntry(shortCode);
+            if (!entry) return c.text(t('shortUrlNotFound'), 404);
+
+            if (!entry.legacy) {
+                const providedToken = getRequestHeader(c.req, 'X-Shortlink-Token') || null;
+                if (!providedToken) {
+                    return c.json({ error: t('missingToken'), reason: 'missing' }, 401);
+                }
+                if (providedToken !== entry.t) {
+                    return c.json({ error: t('tokenMismatch'), reason: 'mismatch' }, 403);
+                }
+            }
 
             const mapping = { b: 'singbox', c: 'clash', x: 'xray', s: 'surge' };
-            const originalUrl = `${urlObj.origin}/${mapping[prefix]}${originalParam}`;
+            const originalUrl = `${urlObj.origin}/${mapping[prefix]}${entry.q}`;
             return c.json({ originalUrl });
         } catch (error) {
             return handleError(c, error, runtime.logger);

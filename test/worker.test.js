@@ -175,4 +175,69 @@ describe('Worker', () => {
         expect(res2.status).toBe(302);
         expect(res2.headers.get('location')).toBe('http://localhost/singbox?config=def');
     });
+
+    it('GET /resolve legacy entry returns originalUrl without token', async () => {
+        const kv = new MemoryKVAdapter();
+        await kv.put('legacy1', '?config=abc');
+        const app = createTestApp({ kv });
+        const res = await app.request('http://localhost/resolve?url=' + encodeURIComponent('http://localhost/b/legacy1'));
+        expect(res.status).toBe(200);
+        const body = await res.json();
+        expect(body.originalUrl).toBe('http://localhost/singbox?config=abc');
+    });
+
+    it('GET /resolve legacy entry ignores any provided token', async () => {
+        const kv = new MemoryKVAdapter();
+        await kv.put('legacy1', '?config=abc');
+        const app = createTestApp({ kv });
+        const res = await app.request('http://localhost/resolve?url=' + encodeURIComponent('http://localhost/b/legacy1'), {
+            headers: { 'X-Shortlink-Token': 'anything' }
+        });
+        expect(res.status).toBe(200);
+    });
+
+    it('GET /resolve new-format entry without token returns 401 missing', async () => {
+        const app = createTestApp();
+        const shorten = await app.request('http://localhost/shorten-v2?url=' + encodeURIComponent('http://localhost/singbox?config=xyz') + '&shortCode=new1');
+        expect(shorten.status).toBe(200);
+        const res = await app.request('http://localhost/resolve?url=' + encodeURIComponent('http://localhost/b/new1'));
+        expect(res.status).toBe(401);
+        const body = await res.json();
+        expect(body.reason).toBe('missing');
+    });
+
+    it('GET /resolve new-format entry with wrong token returns 403 mismatch', async () => {
+        const app = createTestApp();
+        await app.request('http://localhost/shorten-v2?url=' + encodeURIComponent('http://localhost/singbox?config=xyz') + '&shortCode=new1');
+        const res = await app.request('http://localhost/resolve?url=' + encodeURIComponent('http://localhost/b/new1'), {
+            headers: { 'X-Shortlink-Token': 'wrong' }
+        });
+        expect(res.status).toBe(403);
+        const body = await res.json();
+        expect(body.reason).toBe('mismatch');
+    });
+
+    it('GET /resolve new-format entry with correct token returns originalUrl', async () => {
+        const app = createTestApp();
+        const r = await app.request('http://localhost/shorten-v2?url=' + encodeURIComponent('http://localhost/singbox?config=xyz') + '&shortCode=new1');
+        const { token } = await r.json();
+        const res = await app.request('http://localhost/resolve?url=' + encodeURIComponent('http://localhost/b/new1'), {
+            headers: { 'X-Shortlink-Token': token }
+        });
+        expect(res.status).toBe(200);
+        const body = await res.json();
+        expect(body.originalUrl).toBe('http://localhost/singbox?config=xyz');
+    });
+
+    it('GET /resolve unknown code returns 404', async () => {
+        const app = createTestApp();
+        const res = await app.request('http://localhost/resolve?url=' + encodeURIComponent('http://localhost/b/nope'));
+        expect(res.status).toBe(404);
+    });
+
+    it('GET /resolve without url query returns 400', async () => {
+        const app = createTestApp();
+        const res = await app.request('http://localhost/resolve');
+        expect(res.status).toBe(400);
+    });
 });
