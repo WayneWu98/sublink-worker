@@ -162,3 +162,29 @@ describe('ShortLinkService.resolveShortCode', () => {
         expect(await svc.resolveShortCode('does-not-exist')).toBeNull();
     });
 });
+
+describe('ShortLinkService.resolveShortCodeEntry', () => {
+    it('returns null for missing entries', async () => {
+        const kv = new MemoryKVAdapter();
+        const svc = new ShortLinkService(kv);
+        expect(await svc.resolveShortCodeEntry('nope')).toBeNull();
+    });
+
+    it('returns { q, t: null, legacy: true } for legacy entries', async () => {
+        const kv = new MemoryKVAdapter();
+        await kv.put('foo', '?legacy=1');
+        const svc = new ShortLinkService(kv);
+        expect(await svc.resolveShortCodeEntry('foo')).toEqual({ q: '?legacy=1', t: null, legacy: true });
+    });
+
+    it('returns { q, t, legacy: false } for new-format entries', async () => {
+        const kv = new MemoryKVAdapter();
+        const svc = new ShortLinkService(kv);
+        const created = await svc.createShortLink('?url=v1', 'foo', null);
+        expect(await svc.resolveShortCodeEntry('foo')).toEqual({
+            q: '?url=v1',
+            t: created.token,
+            legacy: false
+        });
+    });
+});

@@ -83,4 +83,10 @@ export class ShortLinkService {
         const parsed = this.parseStoredValue(raw);
         return parsed ? parsed.q : null;
     }
+
+    async resolveShortCodeEntry(code) {
+        const kv = this.ensureKv();
+        const raw = await kv.get(code);
+        return this.parseStoredValue(raw);
+    }
 }
