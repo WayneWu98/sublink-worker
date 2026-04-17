@@ -492,34 +492,22 @@ export const formLogicFn = (t) => {
                 }, 500);
             },
 
-            // Check if input looks like a subscription URL
+            // Check if input looks like a full subscription URL (short URLs are no longer auto-resolved).
             isSubscriptionUrl(text) {
-                // Check if it's a single line URL (not multiple lines)
                 if (text.includes('\n')) {
                     return false;
                 }
 
                 try {
                     const url = new URL(text);
-                    // Check if it matches our short link pattern: /[bcxs]/[code]
-                    const pathMatch = url.pathname.match(/^\/([bcxs])\/([a-zA-Z0-9_-]+)$/);
-                    if (pathMatch) {
-                        return true;
-                    }
-
-                    // Check if it's a full subscription URL with query params
                     const fullMatch = url.pathname.match(/^\/(singbox|clash|xray|surge)$/);
-                    if (fullMatch && url.search) {
-                        return true;
-                    }
-
-                    return false;
+                    return !!(fullMatch && url.search);
                 } catch {
                     return false;
                 }
             },
 
-            // Try to parse subscription URL
+            // Try to parse a full subscription URL (short URLs are no longer auto-resolved).
             async tryParseSubscriptionUrl(text) {
                 if (!this.isSubscriptionUrl(text)) {
                     return;
@@ -528,40 +516,16 @@ export const formLogicFn = (t) => {
                 this.parsingUrl = true;
                 try {
                     let urlToParse;
-
                     try {
                         urlToParse = new URL(text);
                     } catch {
                         return;
                     }
 
-                    // Check if it's a short link
-                    const shortMatch = urlToParse.pathname.match(/^\/([bcxs])\/([a-zA-Z0-9_-]+)$/);
-
-                    if (shortMatch) {
-                        // It's a short link, resolve it first
-                        const response = await fetch(`/resolve?url=${encodeURIComponent(text)}`);
-                        if (!response.ok) {
-                            console.warn('Failed to resolve short URL');
-                            return;
-                        }
-
-                        const data = await response.json();
-                        if (!data.originalUrl) {
-                            console.warn('No original URL returned');
-                            return;
-                        }
-
-                        urlToParse = new URL(data.originalUrl);
-                    }
-
-                    // Now parse the full URL and populate form
                     this.populateFormFromUrl(urlToParse);
 
-                    // Show a success message
                     const message = window.APP_TRANSLATIONS?.urlParsedSuccess || '已成功解析订阅链接配置';
                     console.log(message);
-
                 } catch (error) {
                     console.error('Error parsing subscription URL:', error);
                 } finally {

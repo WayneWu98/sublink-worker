@@ -32,4 +32,10 @@ describe('formLogic toString fix', () => {
     expect(typeof data.toggleAccordion).toBe('function');
     expect(data.showAdvanced).toBe(false);
   });
+
+  it('no longer contains the short-URL auto-parse branch', () => {
+    const fnString = formLogicFn.toString();
+    expect(fnString).not.toMatch(/\/\^\\\/\(\[bcxs\]\)\\\/\(\[a-zA-Z0-9_-\]\+\)\$/);
+    expect(fnString).not.toContain("fetch(`/resolve?url=${encodeURIComponent(text)}`)");
+  });
 });
