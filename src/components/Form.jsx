@@ -83,6 +83,18 @@ export const Form = (props) => {
           labelActionsWrapperClass="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
           labelActions={[
             {
+              key: 'loadFromShortCode',
+              icon: 'fas fa-cloud-download-alt',
+              label: t('loadFromShortCode'),
+              hideLabelOnMobile: true,
+              className:
+                'px-2 py-1 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400 transition-colors flex items-center gap-1',
+              title: t('loadFromShortCode'),
+              attrs: {
+                'x-on:click': 'openLoadModal()'
+              }
+            },
+            {
               key: 'paste',
               icon: 'fas fa-paste',
               label: t('paste'),
@@ -476,6 +488,75 @@ class="px-6 py-3.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 bo
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  {/* Load from Short Code Modal */}
+  <div
+    x-cloak
+    x-show="showLoadModal"
+    {...{
+      'x-on:keydown.escape.window': 'closeLoadModal()',
+      'x-on:click.self': 'closeLoadModal()',
+      'x-transition:enter': 'transition ease-out duration-200',
+      'x-transition:enter-start': 'opacity-0',
+      'x-transition:enter-end': 'opacity-100',
+      'x-transition:leave': 'transition ease-in duration-150',
+      'x-transition:leave-start': 'opacity-100',
+      'x-transition:leave-end': 'opacity-0'
+    }}
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+  >
+    <div
+      class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 w-full max-w-md p-6"
+      {...{ 'x-on:click.stop': '' }}
+    >
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <i class="fas fa-cloud-download-alt text-primary-500"></i>
+        {t('loadShortCodeTitle')}
+      </h3>
+
+      <div class="space-y-3">
+        <input
+          type="text"
+          x-model="loadCodeInput"
+          placeholder={t('loadShortCodeCodePlaceholder')}
+          class="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
+        />
+        <input
+          type="text"
+          x-model="loadTokenInput"
+          placeholder={t('loadShortCodeTokenPlaceholder')}
+          class="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 font-mono text-sm"
+        />
+        <div
+          x-show="loadError"
+          x-cloak
+          class="text-sm text-red-500 flex items-center gap-1"
+        >
+          <i class="fas fa-exclamation-circle"></i>
+          <span x-text="loadError"></span>
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-end gap-3">
+        <button
+          type="button"
+          x-on:click="closeLoadModal()"
+          class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium text-sm"
+        >
+          {t('cancel')}
+        </button>
+        <button
+          type="button"
+          x-on:click="loadFromShortCode()"
+          x-bind:disabled="loadingFromCode"
+          class="px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white rounded-lg font-medium text-sm shadow-sm disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          <i class="fas" x-bind:class="loadingFromCode ? 'fa-spinner fa-spin' : 'fa-cloud-download-alt'"></i>
+          <span>{t('load')}</span>
+        </button>
       </div>
     </div>
   </div>
