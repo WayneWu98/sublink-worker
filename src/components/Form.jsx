@@ -506,57 +506,103 @@ class="px-6 py-3.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 bo
       'x-transition:leave-start': 'opacity-100',
       'x-transition:leave-end': 'opacity-0'
     }}
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 dark:bg-black/60 backdrop-blur-sm p-4"
   >
     <div
-      class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 w-full max-w-md p-6"
-      {...{ 'x-on:click.stop': '' }}
+      {...{
+        'x-on:click.stop': '',
+        'x-transition:enter': 'transition ease-out duration-200',
+        'x-transition:enter-start': 'opacity-0 transform scale-95 translate-y-2',
+        'x-transition:enter-end': 'opacity-100 transform scale-100 translate-y-0',
+        'x-transition:leave': 'transition ease-in duration-150',
+        'x-transition:leave-start': 'opacity-100 transform scale-100',
+        'x-transition:leave-end': 'opacity-0 transform scale-95'
+      }}
+      class="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200/80 dark:border-gray-700 w-full max-w-md overflow-hidden"
     >
-      <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-        <i class="fas fa-cloud-download-alt text-primary-500"></i>
-        {t('loadShortCodeTitle')}
-      </h3>
-
-      <div class="space-y-3">
-        <input
-          type="text"
-          x-model="loadCodeInput"
-          placeholder={t('loadShortCodeCodePlaceholder')}
-          class="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
-        />
-        <input
-          type="text"
-          x-model="loadTokenInput"
-          placeholder={t('loadShortCodeTokenPlaceholder')}
-          class="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 font-mono text-sm"
-        />
-        <div
-          x-show="loadError"
-          x-cloak
-          class="text-sm text-red-500 flex items-center gap-1"
-        >
-          <i class="fas fa-exclamation-circle"></i>
-          <span x-text="loadError"></span>
-        </div>
-      </div>
-
-      <div class="mt-6 flex justify-end gap-3">
+      {/* Header */}
+      <div class="relative px-6 py-5 bg-gradient-to-br from-primary-50 via-primary-50/60 to-transparent dark:from-primary-900/30 dark:via-primary-900/10 dark:to-transparent border-b border-gray-100 dark:border-gray-700/60">
         <button
           type="button"
           x-on:click="closeLoadModal()"
-          class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium text-sm"
+          class="absolute top-4 right-4 w-8 h-8 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-white/70 dark:hover:bg-gray-700 transition-colors flex items-center justify-center"
+          aria-label={t('cancel')}
         >
-          {t('cancel')}
+          <i class="fas fa-times text-sm"></i>
         </button>
-        <button
-          type="button"
-          x-on:click="loadFromShortCode()"
-          x-bind:disabled="loadingFromCode"
-          class="px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white rounded-lg font-medium text-sm shadow-sm disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+        <div class="flex items-center gap-3 pr-8">
+          <span class="w-10 h-10 rounded-xl bg-white dark:bg-gray-800 shadow-sm text-primary-600 dark:text-primary-400 flex items-center justify-center shrink-0 ring-1 ring-primary-100 dark:ring-primary-900/50">
+            <i class="fas fa-cloud-download-alt"></i>
+          </span>
+          <h3 class="text-base font-semibold text-gray-900 dark:text-white">
+            {t('loadShortCodeTitle')}
+          </h3>
+        </div>
+      </div>
+
+      <div class="px-6 py-5">
+        {/* Form fields */}
+        <div class="space-y-3.5">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              {t('loadShortCodeCodePlaceholder')}
+            </label>
+            <input
+              type="text"
+              x-model="loadCodeInput"
+              {...{ 'x-on:keydown.enter.prevent': 'loadFromShortCode()' }}
+              class="w-full px-3.5 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900/40 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 hover:border-gray-300 dark:hover:border-gray-500 transition-all duration-150 font-mono text-sm"
+              placeholder="abc1234"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Token
+            </label>
+            <input
+              type="text"
+              x-model="loadTokenInput"
+              {...{ 'x-on:keydown.enter.prevent': 'loadFromShortCode()' }}
+              class="w-full px-3.5 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900/40 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 hover:border-gray-300 dark:hover:border-gray-500 transition-all duration-150 font-mono text-sm"
+              placeholder={t('loadShortCodeTokenPlaceholder')}
+            />
+          </div>
+        </div>
+
+        {/* Error */}
+        <div
+          x-show="loadError"
+          x-cloak
+          {...{
+            'x-transition:enter': 'transition ease-out duration-150',
+            'x-transition:enter-start': 'opacity-0 transform -translate-y-1',
+            'x-transition:enter-end': 'opacity-100 transform translate-y-0'
+          }}
+          class="mt-3 flex items-start gap-2 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200/70 dark:border-red-800/60"
         >
-          <i class="fas" x-bind:class="loadingFromCode ? 'fa-spinner fa-spin' : 'fa-cloud-download-alt'"></i>
-          <span>{t('load')}</span>
-        </button>
+          <i class="fas fa-exclamation-circle text-red-500 dark:text-red-400 text-sm mt-0.5"></i>
+          <span class="text-sm text-red-700 dark:text-red-300 leading-snug" x-text="loadError"></span>
+        </div>
+
+        {/* Actions */}
+        <div class="flex items-center justify-end gap-2 mt-6">
+          <button
+            type="button"
+            x-on:click="closeLoadModal()"
+            class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors font-medium text-sm"
+          >
+            {t('cancel')}
+          </button>
+          <button
+            type="button"
+            x-on:click="loadFromShortCode()"
+            x-bind:disabled="loadingFromCode"
+            class="px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white rounded-lg font-medium text-sm shadow-sm shadow-primary-500/20 hover:shadow-md hover:shadow-primary-500/30 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5 transition-all"
+          >
+            <i class="fas text-xs" x-bind:class="loadingFromCode ? 'fa-spinner fa-spin' : 'fa-download'"></i>
+            <span>{t('load')}</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
