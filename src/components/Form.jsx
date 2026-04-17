@@ -39,7 +39,18 @@ export const Form = (props) => {
     shortCodeTokenHelp: t('shortCodeTokenHelp'),
     shortCodeTokenIssuedTitle: t('shortCodeTokenIssuedTitle'),
     shortCodeTokenIssuedHelp: t('shortCodeTokenIssuedHelp'),
-    showFullLinks: t('showFullLinks')
+    showFullLinks: t('showFullLinks'),
+    loadFromShortCode: t('loadFromShortCode'),
+    loadShortCodeTitle: t('loadShortCodeTitle'),
+    loadShortCodeCodePlaceholder: t('loadShortCodeCodePlaceholder'),
+    loadShortCodeTokenPlaceholder: t('loadShortCodeTokenPlaceholder'),
+    loadShortCodeMissingFields: t('loadShortCodeMissingFields'),
+    loadShortCodeMissingToken: t('loadShortCodeMissingToken'),
+    loadShortCodeTokenMismatch: t('loadShortCodeTokenMismatch'),
+    loadShortCodeNotFound: t('loadShortCodeNotFound'),
+    loadShortCodeFailed: t('loadShortCodeFailed'),
+    cancel: t('cancel'),
+    load: t('load')
   };
 
   const scriptContent = `

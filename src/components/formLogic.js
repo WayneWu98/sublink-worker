@@ -106,6 +106,11 @@ export const formLogicFn = (t) => {
             customShortCode: '',
             shortCodeToken: '',
             issuedShortCodeToken: '',
+            showLoadModal: false,
+            loadCodeInput: '',
+            loadTokenInput: '',
+            loadingFromCode: false,
+            loadError: '',
             parsingUrl: false,
             parseDebounceTimer: null,
             // These will be populated from window.APP_TRANSLATIONS
@@ -603,6 +608,69 @@ export const formLogicFn = (t) => {
                 if (selectedRules || customRules || this.groupByCountry || this.enableClashUI ||
                     externalController || externalUiDownloadUrl || ua || configId) {
                     this.showAdvanced = true;
+                }
+            },
+
+            openLoadModal() {
+                this.showLoadModal = true;
+                this.loadCodeInput = '';
+                this.loadTokenInput = '';
+                this.loadError = '';
+            },
+
+            closeLoadModal() {
+                this.showLoadModal = false;
+                this.loadError = '';
+            },
+
+            async loadFromShortCode() {
+                const code = this.loadCodeInput.trim();
+                const token = this.loadTokenInput.trim();
+                if (!code) {
+                    this.loadError = window.APP_TRANSLATIONS?.loadShortCodeMissingFields || 'Short code is required';
+                    return;
+                }
+
+                this.loadingFromCode = true;
+                this.loadError = '';
+                try {
+                    const origin = window.location.origin;
+                    const shortUrl = origin + '/b/' + encodeURIComponent(code);
+                    const headers = token ? { 'X-Shortlink-Token': token } : {};
+                    const response = await fetch('/resolve?url=' + encodeURIComponent(shortUrl), { headers });
+
+                    if (response.status === 401) {
+                        this.loadError = window.APP_TRANSLATIONS?.loadShortCodeMissingToken || 'Token required';
+                        return;
+                    }
+                    if (response.status === 403) {
+                        this.loadError = window.APP_TRANSLATIONS?.loadShortCodeTokenMismatch || 'Token does not match';
+                        return;
+                    }
+                    if (response.status === 404) {
+                        this.loadError = window.APP_TRANSLATIONS?.loadShortCodeNotFound || 'Short code not found';
+                        return;
+                    }
+                    if (!response.ok) {
+                        this.loadError = window.APP_TRANSLATIONS?.loadShortCodeFailed || 'Failed to load';
+                        return;
+                    }
+
+                    const data = await response.json();
+                    if (!data || !data.originalUrl) {
+                        this.loadError = window.APP_TRANSLATIONS?.loadShortCodeFailed || 'Failed to load';
+                        return;
+                    }
+
+                    this.populateFormFromUrl(new URL(data.originalUrl));
+                    this.customShortCode = code;
+                    this.shortCodeToken = token;
+                    this.showLoadModal = false;
+                } catch (error) {
+                    console.error('Error loading from short code:', error);
+                    this.loadError = window.APP_TRANSLATIONS?.loadShortCodeFailed || 'Failed to load';
+                } finally {
+                    this.loadingFromCode = false;
                 }
             }
         }

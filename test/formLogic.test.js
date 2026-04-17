@@ -38,4 +38,19 @@ describe('formLogic toString fix', () => {
     expect(fnString).not.toMatch(/\/\^\\\/\(\[bcxs\]\)\\\/\(\[a-zA-Z0-9_-\]\+\)\$/);
     expect(fnString).not.toContain("fetch(`/resolve?url=${encodeURIComponent(text)}`)");
   });
+
+  it('exposes modal state and loadFromShortCode handler', () => {
+    const fakeWindow = { APP_TRANSLATIONS: {}, PREDEFINED_RULE_SETS: {} };
+    const fn = new Function('window', '(' + formLogicFn.toString() + ')(); return window;');
+    const result = fn(fakeWindow);
+    const data = result.formData();
+    expect(data.showLoadModal).toBe(false);
+    expect(data.loadCodeInput).toBe('');
+    expect(data.loadTokenInput).toBe('');
+    expect(data.loadingFromCode).toBe(false);
+    expect(data.loadError).toBe('');
+    expect(typeof data.loadFromShortCode).toBe('function');
+    expect(typeof data.openLoadModal).toBe('function');
+    expect(typeof data.closeLoadModal).toBe('function');
+  });
 });
