@@ -84,3 +84,49 @@ describe('Surge #!MANAGED-CONFIG URL resolution', () => {
         expect(url).not.toMatch(/^https:/);
     });
 });
+
+describe('/s/:code redirect passes short URL via sub_url', () => {
+    it('/s/:code redirect Location preserves original params and appends encoded sub_url', async () => {
+        const kv = new MemoryKVAdapter();
+        await kv.put('abc123', '?config=xyz');
+        const app = createTestApp({ kv });
+        const res = await app.request('http://localhost/s/abc123');
+        expect(res.status).toBe(302);
+        const loc = res.headers.get('location');
+        expect(loc).toBeTruthy();
+
+        const locUrl = new URL(loc);
+        expect(locUrl.origin).toBe('http://localhost');
+        expect(locUrl.pathname).toBe('/surge');
+        expect(locUrl.searchParams.get('config')).toBe('xyz');
+        expect(locUrl.searchParams.get('sub_url')).toBe('http://localhost/s/abc123');
+    });
+
+    it('/b/:code redirect Location does NOT include sub_url (Singbox out of scope)', async () => {
+        const kv = new MemoryKVAdapter();
+        await kv.put('abc123', '?config=xyz');
+        const app = createTestApp({ kv });
+        const res = await app.request('http://localhost/b/abc123');
+        expect(res.status).toBe(302);
+        const loc = res.headers.get('location');
+        expect(new URL(loc).searchParams.has('sub_url')).toBe(false);
+    });
+
+    it('/c/:code redirect Location does NOT include sub_url', async () => {
+        const kv = new MemoryKVAdapter();
+        await kv.put('abc123', '?config=xyz');
+        const app = createTestApp({ kv });
+        const res = await app.request('http://localhost/c/abc123');
+        expect(res.status).toBe(302);
+        expect(new URL(res.headers.get('location')).searchParams.has('sub_url')).toBe(false);
+    });
+
+    it('/x/:code redirect Location does NOT include sub_url', async () => {
+        const kv = new MemoryKVAdapter();
+        await kv.put('abc123', '?config=xyz');
+        const app = createTestApp({ kv });
+        const res = await app.request('http://localhost/x/abc123');
+        expect(res.status).toBe(302);
+        expect(new URL(res.headers.get('location')).searchParams.has('sub_url')).toBe(false);
+    });
+});

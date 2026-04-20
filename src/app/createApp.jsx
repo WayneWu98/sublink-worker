@@ -335,7 +335,13 @@ export function createApp(bindings = {}) {
             if (!originalParam) return c.text('Short URL not found', 404);
 
             const url = new URL(c.req.url);
-            return c.redirect(`${url.origin}/${prefix}${originalParam}`);
+            let target = `${url.origin}/${prefix}${originalParam}`;
+            if (prefix === 'surge') {
+                const shortUrl = `${url.origin}/s/${code}`;
+                const separator = originalParam.includes('?') ? '&' : '?';
+                target = `${target}${separator}sub_url=${encodeURIComponent(shortUrl)}`;
+            }
+            return c.redirect(target);
         } catch (error) {
             return handleError(c, error, runtime.logger);
         }
