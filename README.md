@@ -34,6 +34,49 @@
   </p>
 </div>
 
+## 🔱 About This Fork
+
+This is a community fork of **[7Sageer/sublink-worker](https://github.com/7Sageer/sublink-worker)** maintained at **[WayneWu98/sublink-worker](https://github.com/WayneWu98/sublink-worker)**. All credit for the original project goes to the upstream authors.
+
+**Differences from upstream (at the time of writing):**
+
+- **Short-link token auth (v2.5+)** — `/shorten-v2` returns `{code, token}`; overwriting an existing short code requires the matching `X-Shortlink-Token` header. See details below.
+- **Short code loader UI + `/resolve` read auth (v2.6+)** — Explicit "Load from Code" button replaces the removed paste-auto-parse flow; `/resolve` now authenticates new-format entries. See details below.
+- **Surge `#!MANAGED-CONFIG` short-URL preservation (v2.7+)** — Surge configs fetched via a short link embed the short URL in `MANAGED-CONFIG` so short-code remaps propagate without client reconfiguration. See details below.
+
+Version-specific sections further down in this README contain the migration notes for each change.
+
+## ⚠️ Data Retention Notice
+
+**Short links and stored configs persist your data, including credentials, to the backend KV store.** Before using this tool — especially a public-facing instance — understand exactly what gets written:
+
+### `/shorten-v2` (and the web UI's "Shorten" button)
+
+Submitting a subscription for shortening writes the **full query string you submitted** to KV under the generated short code. That query string includes the `config` parameter, which carries:
+
+- Raw proxy URIs (`vmess://`, `vless://`, `ss://`, `hysteria2://`, `trojan://`, `tuic://`, …) — these encode **server addresses, UUIDs, passwords, and pre-shared keys**.
+- HTTP/HTTPS subscription URLs you pasted in.
+- Your selected rules and custom rule sets.
+
+Storage format (v2.5+): `{ "q": "<full query string>", "t": "<32-hex token>" }`. Legacy entries (pre-v2.5) store the raw query string only.
+
+### `POST /config` (custom base config upload)
+
+Uploading a custom Sing-Box / Clash / Surge base config writes the **entire config body** to KV under a generated ID. If your base config contains account credentials, policy rules, or DNS settings you consider private, they are persisted as-is.
+
+### Where "the backend KV" actually is
+
+- **Self-hosted (Cloudflare Workers / Vercel KV / Upstash Redis / local Redis via Docker):** data lives in the KV backend **you** configured. Retention, access, and deletion are your responsibility.
+- **Public instance:** data lives in the KV of whoever operates that instance. Treat any public instance as you would any untrusted third party that now holds your proxy credentials.
+
+### TTL
+
+Short links and stored configs respect the optional TTL configured via `shortLinkTtlSeconds` / `configTtlSeconds`. If unset, entries persist indefinitely until manually deleted.
+
+### Recommendation
+
+If your subscription contains credentials you consider sensitive, **self-host** rather than using a public instance, and configure a reasonable TTL.
+
 ## 🚀 Quick Start
 
 ### One-Click Deployment
