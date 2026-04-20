@@ -130,3 +130,23 @@ describe('/s/:code redirect passes short URL via sub_url', () => {
         expect(new URL(res.headers.get('location')).searchParams.has('sub_url')).toBe(false);
     });
 });
+
+describe('End-to-end: short link → Surge config → MANAGED-CONFIG short URL', () => {
+    it('following the /s/:code redirect yields MANAGED-CONFIG pointing at the short URL', async () => {
+        const kv = new MemoryKVAdapter();
+        await kv.put('abc123', `?config=${encodeURIComponent(VMESS_CONFIG)}`);
+        const app = createTestApp({ kv });
+
+        const r1 = await app.request('http://localhost/s/abc123');
+        expect(r1.status).toBe(302);
+        const location = r1.headers.get('location');
+        expect(location).toBeTruthy();
+
+        const r2 = await app.request(location);
+        expect(r2.status).toBe(200);
+        const body = await r2.text();
+
+        expect(body).toMatch(/^#!MANAGED-CONFIG http:\/\/localhost\/s\/abc123 interval=/m);
+        expect(body).not.toMatch(/#!MANAGED-CONFIG http:\/\/localhost\/surge\?/);
+    });
+});
