@@ -122,6 +122,16 @@ Building on v2.5's token system:
 
 Migration: any external tooling that called `/resolve` on a new-format short code must now supply `X-Shortlink-Token`.
 
+## 🔐 Surge `#!MANAGED-CONFIG` Short-URL Preservation (v2.7+)
+
+Surge responses previously embedded the long converter URL (e.g. `/surge?config=...`) in their `#!MANAGED-CONFIG` directive. As of v2.7:
+
+- When a Surge client subscribes via a short link (`/s/:code`), the returned config's `#!MANAGED-CONFIG` line now points at the **short URL** (e.g. `https://<host>/s/abc123`). The client stays pinned to the short link; subsequent `/shorten-v2` overwrites of the same code are automatically picked up on the next client refresh, with no manual reconfiguration.
+- Direct access to `/surge?config=...` (no short link involved) is unchanged — the long request URL is written into `MANAGED-CONFIG`.
+- A new optional query parameter `sub_url` is accepted by `/surge`. It must be a **same-origin** absolute URL; cross-origin or malformed values are silently ignored (stripped from the fallback URL) to prevent malicious URL override.
+
+**One-time migration for existing subscribers:** Surge clients already pinned to the long URL (from an earlier build) will not auto-migrate. Re-enter the short URL in Surge once to pick up the new behavior.
+
 ## ⭐ Star History
 
 Thanks to everyone who has starred this project! 🌟
