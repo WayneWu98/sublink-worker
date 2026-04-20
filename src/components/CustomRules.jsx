@@ -97,6 +97,20 @@ export const CustomRules = (props) => {
                 />
             </div>
 
+            {/* Domain (exact match) */}
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
+                    {t('customRuleDomain')}
+                    <i class="fas fa-info-circle text-gray-400 hover:text-primary-500 cursor-help" title={t('customRuleDomainTooltip')}></i>
+                </label>
+                <input
+                    type="text"
+                    x-model="rule.domain"
+                    class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
+                    placeholder={t('customRuleDomainPlaceholder')}
+                />
+            </div>
+
             {/* Domain Suffix */}
             <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -214,7 +228,7 @@ export const CustomRules = (props) => {
           id="customRulesJson"
           name="customRulesJson"
           model="jsonContent"
-          placeholder='[{"name": "MyRule", "src_ip_cidr": "192.168.1.13/32", "domain_suffix": "example.com", "outbound": "Proxy"}]'
+          placeholder='[{"name": "MyRule", "domain": "example.com", "domain_suffix": "example.net", "outbound": "Proxy"}]'
           variant="mono"
           textareaClass="min-h-[16rem]"
           containerClass="group"
@@ -295,6 +309,7 @@ export const CustomRules = (props) => {
             addRule() {
               this.rules.push({
                 name: '',
+                domain: '',
                 domain_suffix: '',
                 domain_keyword: '',
                 src_ip_cidr: '',
@@ -302,8 +317,7 @@ export const CustomRules = (props) => {
                 protocol: '',
                 site: '',
                 ip: '',
-                outbound: '' // Will be set to name by default in backend or needs explicit field? 
-                             // In original logic, outbound name IS the rule name for custom rules.
+                outbound: ''
               });
             },
             

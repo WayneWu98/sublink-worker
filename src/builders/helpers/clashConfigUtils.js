@@ -12,6 +12,16 @@ export function emitClashRules(rules = [], translator) {
                 results.push(`SRC-IP-CIDR,${cidr},${translator('outboundNames.' + rule.outbound)}`);
             });
         });
+
+    rules
+        .filter(rule => Array.isArray(rule.domain) && rule.domain.length > 0)
+        .forEach(rule => {
+            rule.domain.forEach(value => {
+                if (!value) return;
+                results.push(`DOMAIN,${value},${translator('outboundNames.' + rule.outbound)}`);
+            });
+        });
+
     rules
         .filter(rule => Array.isArray(rule.domain_suffix) && rule.domain_suffix.length > 0)
         .forEach(rule => {

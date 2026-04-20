@@ -443,6 +443,13 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
             });
         });
 
+        rules.filter(rule => Array.isArray(rule.domain) && rule.domain.length > 0).map(rule => {
+            rule.domain.forEach(value => {
+                if (!value) return;
+                finalConfig.push(`DOMAIN,${value},${this.t('outboundNames.' + rule.outbound)}`);
+            });
+        });
+
         rules.filter(rule => !!rule.domain_suffix).map(rule => {
             rule.domain_suffix.forEach(suffix => {
                 finalConfig.push(`DOMAIN-SUFFIX,${suffix},${this.t('outboundNames.' + rule.outbound)}`);
