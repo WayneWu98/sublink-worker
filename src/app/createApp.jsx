@@ -204,7 +204,7 @@ export function createApp(bindings = {}) {
                 groupByCountry,
                 includeAutoSelect
             );
-            builder.setSubscriptionUrl(c.req.url);
+            builder.setSubscriptionUrl(resolveSurgeSubscriptionUrl(c.req));
             await builder.build();
 
             const userinfo = builder.getSubscriptionUserinfo();
@@ -500,6 +500,26 @@ function resolveSingboxConfigVersion(requestedVersion, userAgent) {
     }
 
     return '1.12';
+}
+
+function resolveSurgeSubscriptionUrl(req) {
+    const reqUrl = new URL(req.url);
+    const rawSubUrl = req.query('sub_url');
+
+    if (rawSubUrl) {
+        let candidate;
+        try {
+            candidate = new URL(rawSubUrl);
+        } catch {
+            candidate = null;
+        }
+        if (candidate && candidate.origin === reqUrl.origin) {
+            return candidate.toString();
+        }
+    }
+
+    reqUrl.searchParams.delete('sub_url');
+    return reqUrl.toString();
 }
 
 function getRequestHeader(request, name) {
