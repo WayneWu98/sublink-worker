@@ -483,11 +483,12 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
             }, rule));
         });
 
-        rules.filter(rule => hasMatchValues(rule.domain_suffix) || hasMatchValues(rule.domain_keyword)).map(rule => {
+        rules.filter(rule => hasMatchValues(rule.domain) || hasMatchValues(rule.domain_suffix) || hasMatchValues(rule.domain_keyword)).map(rule => {
             const entry = {
                 outbound: this.t(`outboundNames.${rule.outbound}`)
             };
 
+            if (hasMatchValues(rule.domain)) entry.domain = rule.domain;
             if (hasMatchValues(rule.domain_suffix)) entry.domain_suffix = rule.domain_suffix;
             if (hasMatchValues(rule.domain_keyword)) entry.domain_keyword = rule.domain_keyword;
 
