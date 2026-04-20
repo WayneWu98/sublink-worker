@@ -57,6 +57,7 @@ export function generateRules(selectedRules = [], customRules = []) {
 		rules.unshift({
 			site_rules: toStringArray(rule.site),
 			ip_rules: toStringArray(rule.ip),
+			domain: toStringArray(rule.domain),
 			domain_suffix: toStringArray(rule.domain_suffix),
 			domain_keyword: toStringArray(rule.domain_keyword),
 			ip_cidr: toStringArray(rule.ip_cidr),
