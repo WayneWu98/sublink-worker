@@ -1,9 +1,10 @@
 services:
   worker:
-    image: ${SUBLINK_WORKER_IMAGE:-ghcr.io/7sageer/sublink-worker:latest}
-    pull_policy: always
+    image: ${SUBLINK_WORKER_IMAGE:-callmewaynewu/sublink-worker:latest}
+    container_name: sublink-worker
+    restart: unless-stopped
     ports:
-      - "8787:8787"
+      - '8787:8787'
     environment:
       REDIS_HOST: redis
       REDIS_PORT: 6379
@@ -11,12 +12,20 @@ services:
       CONFIG_TTL_SECONDS: 2592000
     depends_on:
       - redis
+    networks:
+      - internal
+
   redis:
     image: redis:7-alpine
-    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
-    volumes:
-      - redis-data:/data
-      - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
+    container_name: sublink-redis
     restart: unless-stopped
-volumes:
-  redis-data:
+    command: ['redis-server', '/usr/local/etc/redis/redis.conf']
+    volumes:
+      - ./redis-data:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      - internal
+
+networks:
+  internal:
+    driver: bridge

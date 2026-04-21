@@ -6,6 +6,8 @@
 
   <p><b>A lightweight subscription converter and manager for proxy protocols, deployable on Cloudflare Workers, Vercel, Node.js, or Docker.</b></p>
 
+  <p><b>English</b> · <a href="README.zh-Hans.md">简体中文</a></p>
+
   <a href="https://trendshift.io/repositories/12291" target="_blank">
     <img src="https://trendshift.io/api/badge/repositories/12291" alt="7Sageer%2Fsublink-worker | Trendshift" width="250" height="55"/>
   </a>
@@ -23,7 +25,7 @@
 
   <h3>📚 Documentation</h3>
   <p>
-    <a href="https://app.sublink.works"><b>⚡ Live Demo</b></a> ·
+    <a href="https://subconverter.wayne-wu.com"><b>⚡ Live Demo</b></a> ·
     <a href="https://sublink.works/en/"><b>Documentation</b></a> 
     <a href="https://sublink.works"><b>中文文档</b></a>·
   </p>
@@ -86,7 +88,7 @@ If your subscription contains credentials you consider sensitive, **self-host** 
 ### Alternative Runtimes
 - **Node.js**: `npm run build:node && node dist/node-server.cjs`
 - **Vercel**: `vercel deploy` (configure KV in project settings)
-- **Docker**: `docker pull ghcr.io/7sageer/sublink-worker:latest`
+- **Docker**: `docker pull callmewaynewu/sublink-worker:latest`
 - **Docker Compose**: `docker compose up -d` (includes Redis)
 
 ## ✨ Features
