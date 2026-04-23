@@ -9,11 +9,8 @@ export const CustomRuleSets = (props) => {
     const providersJson = JSON.stringify(RULE_SET_PROVIDERS);
     const unsupportedLabel = t('ruleSetUrlPreviewUnsupported');
 
-    // Static outbound targets that always exist (regardless of selectedRules)
-    const STATIC_OUTBOUNDS = ['Node Select', 'Auto Select', 'Fall Back', 'Manual Switch', 'DIRECT', 'REJECT'];
-    // Build translated-label map so the dropdown shows readable text
+    // Client-side label map for dynamic `<template x-for>` options (selectedRules)
     const outboundLabels = {};
-    STATIC_OUTBOUNDS.forEach((k) => { outboundLabels[k] = t('outboundNames.' + k); });
     UNIFIED_RULES.forEach((r) => { outboundLabels[r.name] = t('outboundNames.' + r.name); });
 
     return (
@@ -124,12 +121,15 @@ export const CustomRuleSets = (props) => {
                                 <div class="col-span-1 md:col-span-2">
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('ruleSetOutbound')}</label>
                                     <select x-model="rule.outbound" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                                        <optgroup x-bind:label="'{t('outboundBuiltIn')}'">
-                                            <template x-for="key in STATIC_OUTBOUNDS" x-bind:key="key">
-                                                <option x-bind:value="key" x-text="OUTBOUND_LABELS[key] || key"></option>
-                                            </template>
+                                        <optgroup label={t('outboundBuiltIn')}>
+                                            <option value="Node Select">{t('outboundNames.Node Select')}</option>
+                                            <option value="Auto Select">{t('outboundNames.Auto Select')}</option>
+                                            <option value="Fall Back">{t('outboundNames.Fall Back')}</option>
+                                            <option value="Manual Switch">{t('outboundNames.Manual Switch')}</option>
+                                            <option value="DIRECT">DIRECT</option>
+                                            <option value="REJECT">REJECT</option>
                                         </optgroup>
-                                        <optgroup x-bind:label="'{t('outboundSelectedGroups')}'" x-show="Array.isArray($root.selectedRules) && $root.selectedRules.length > 0">
+                                        <optgroup label={t('outboundSelectedGroups')}>
                                             <template x-for="key in ($root.selectedRules || [])" x-bind:key="key">
                                                 <option x-bind:value="key" x-text="OUTBOUND_LABELS[key] || key"></option>
                                             </template>
@@ -166,7 +166,6 @@ export const CustomRuleSets = (props) => {
                 __html: `
                 const RULE_SET_PROVIDERS = ${providersJson};
                 const UNSUPPORTED_LABEL = ${JSON.stringify(unsupportedLabel)};
-                const STATIC_OUTBOUNDS = ${JSON.stringify(STATIC_OUTBOUNDS)};
                 const OUTBOUND_LABELS = ${JSON.stringify(outboundLabels)};
 
                 function resolveProviderUrlClient(providerId, type, format, file) {
