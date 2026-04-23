@@ -166,21 +166,61 @@ export const Form = (props) => {
       </select>
           </div>
 
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-    {UNIFIED_RULES.map((rule) => (
-      <label class="flex items-center p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors group">
-        <input
-          type="checkbox"
-          value={rule.name}
-          x-model="selectedRules" 
-                    x-on:change="selectedPredefinedRule = 'custom'"
-        class="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600"
-                  />
-        <span class="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
-          {t(`outboundNames.${rule.name}`)}
-        </span>
-      </label>
-    ))}
+  <div x-data="{ showExtended: false }">
+    {/* Base groups */}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      {UNIFIED_RULES.filter(rule => !rule.extended).map((rule) => (
+        <label class="flex items-center p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors group">
+          <input
+            type="checkbox"
+            value={rule.name}
+            x-model="selectedRules"
+            x-on:change="selectedPredefinedRule = 'custom'"
+            class="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600"
+          />
+          <span class="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+            {t(`outboundNames.${rule.name}`)}
+          </span>
+        </label>
+      ))}
+    </div>
+
+    {/* Disclosure */}
+    <button
+      type="button"
+      x-on:click="showExtended = !showExtended"
+      class="mt-4 flex items-center gap-2 text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400"
+    >
+      <i x-bind:class="showExtended ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
+      <span x-show="!showExtended">{t('showMoreRuleGroups')} ({UNIFIED_RULES.filter(r => r.extended).length})</span>
+      <span x-show="showExtended">{t('hideMoreRuleGroups')}</span>
+    </button>
+
+    {/* Extended groups */}
+    <div
+      x-show="showExtended"
+      {...{
+        'x-transition:enter': 'transition ease-out duration-300',
+        'x-transition:enter-start': 'opacity-0 -translate-y-2',
+        'x-transition:enter-end': 'opacity-100 translate-y-0'
+      }}
+      class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
+    >
+      {UNIFIED_RULES.filter(rule => rule.extended).map((rule) => (
+        <label class="flex items-center p-3 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors group">
+          <input
+            type="checkbox"
+            value={rule.name}
+            x-model="selectedRules"
+            x-on:change="selectedPredefinedRule = 'custom'"
+            class="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600"
+          />
+          <span class="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+            {t(`outboundNames.${rule.name}`)}
+          </span>
+        </label>
+      ))}
+    </div>
   </div>
 
           </div>
