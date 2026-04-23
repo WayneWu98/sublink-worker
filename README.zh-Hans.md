@@ -112,6 +112,24 @@ Sing-Box · Clash · Xray/V2Ray · Surge
 - 多语言支持（中文、英文、波斯语、俄语）
 - 带预设规则集与可自定义策略组的 Web 界面
 
+## 🧩 规则组
+
+### 扩展规则组
+
+在「规则选择」卡片里点击「展开更多规则组」即可看到 15 个额外分组：Discord、WhatsApp、Signal、Line、Zoom、Spotify、News、Reddit、Twitch、Pixiv、Developer、OpenAI、Anthropic、Speedtest、Porn。这些分组不包含在任何预设中，需要用时自行勾选。`minimal` / `balanced` / `comprehensive` 预设行为保持不变。
+
+### 自定义 RuleSet
+
+可订阅任意公开 rule-set 文件并注册为独立策略组。展开高级选项中的「自定义 RuleSet」卡片，新增一项：
+
+- **源（Provider）**：MetaCubeX、blackmatrix7、Loyalsoldier、ACL4SSR 或 `Custom URL`
+- **文件名**（源 ≠ `Custom URL`）：文件 stem，如 `reddit`、`spotify`、`Notion`；sing-box / Clash / Surge 的 URL 会自动按目标格式拼出
+- **自定义 URL**（源 = `Custom URL`）：分别填 sing-box（`.srs`）、Clash（`.mrs`/`.yaml`）、Surge（`.list`）。只填了哪个格式就只在哪个格式生效
+- **类型**：`site` 匹配域名，`ip` 匹配 IP 段
+- **出站**：命中流量的目标策略（`Proxy`、`Direct`、`Reject` 或任意选择器名）
+
+自定义 RuleSet 会随分享链接的 `customRuleSets` 参数一并往返。若某个源没有对应格式（例如 ACL4SSR 没有 sing-box `.srs`），导出该格式时会自动跳过，不会影响其他格式。
+
 ## 🤝 贡献
 
 欢迎通过 Issue 与 Pull Request 改进本项目。

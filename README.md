@@ -112,6 +112,24 @@ Sing-Box • Clash • Xray/V2Ray • Surge
 - Multi-language support (Chinese, English, Persian, Russian)
 - Web interface with predefined rule sets and customizable policy groups
 
+## 🧩 Rule Groups
+
+### Extended rule groups
+
+15 additional rule groups (Discord, WhatsApp, Signal, Line, Zoom, Spotify, News, Reddit, Twitch, Pixiv, Developer, OpenAI, Anthropic, Speedtest, Porn) are available behind a "Show more rule groups" disclosure in the Rule Selection card. They are not included in any preset; check them individually when you want them. Presets (`minimal`, `balanced`, `comprehensive`) are unchanged.
+
+### Custom RuleSets
+
+Subscribe to any public rule-set file and register it as an independent proxy group. Expand **Custom RuleSets** under Advanced Options and add an entry:
+
+- **Provider**: pick from MetaCubeX, blackmatrix7, Loyalsoldier, ACL4SSR, or `Custom URL`
+- **File name** (non-`Custom URL` providers): file stem such as `reddit`, `spotify`, `Notion` — URL is derived automatically for sing-box/Clash/Surge
+- **Custom URL**: supply one URL per format (sing-box `.srs`, Clash `.mrs`/`.yaml`, Surge `.list`). Only formats you fill in will emit
+- **Type**: `site` for domain rule-sets, `ip` for IP CIDR rule-sets
+- **Outbound**: proxy group for matched traffic (`Proxy`, `Direct`, `Reject`, or any selector name)
+
+Entries round-trip through share links via the `customRuleSets` URL parameter. Providers that do not publish a given format (e.g. ACL4SSR has no sing-box `.srs`) are silently skipped on export — mixed-format subscriptions stay valid.
+
 ## 🤝 Contributing
 
 Issues and Pull Requests are welcome to improve this project.
