@@ -2,6 +2,7 @@
 /** @jsxImportSource hono/jsx */
 import { PREDEFINED_RULE_SETS, UNIFIED_RULES } from '../config/index.js';
 import { CustomRules } from './CustomRules.jsx';
+import { CustomRuleSets } from './CustomRuleSets.jsx';
 import { TextareaWithActions } from './TextareaWithActions.jsx';
 import { ValidatedTextarea } from './ValidatedTextarea.jsx';
 import { formLogicFn } from './formLogic.js';
@@ -227,6 +228,9 @@ export const Form = (props) => {
 
   {/* Custom Rules Component */ }
   <CustomRules t={t} />
+
+  {/* Custom RuleSets Component */ }
+  <CustomRuleSets t={t} />
 
     {/* General Options */ }
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
