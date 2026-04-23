@@ -214,7 +214,7 @@ export const CustomRuleSets = (props) => {
                             this.rules.push({
                                 name: '', provider: 'metacubex', file: '',
                                 urls: { singbox: '', clash: '', surge: '' },
-                                type: 'site', outbound: 'Node Select'
+                                type: 'site', outbound: 'DIRECT'
                             });
                         },
                         removeRule(i) { this.rules.splice(i, 1); },
