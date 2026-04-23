@@ -51,3 +51,22 @@ describe('SurgeConfigBuilder customRuleSets', () => {
     expect(text).toContain('FINAL');
   });
 });
+
+import { createApp } from '../src/app/createApp.jsx';
+
+describe('Request handler customRuleSets parsing', () => {
+  it('clash endpoint accepts customRuleSets query param and emits the provider', async () => {
+    const app = createApp();
+    const qs = new URLSearchParams({
+      config: SAMPLE,
+      selectedRules: JSON.stringify(['Non-China']),
+      customRuleSets: JSON.stringify([
+        { name: 'MyReddit', provider: 'metacubex', file: 'reddit', type: 'site', outbound: 'Proxy' }
+      ])
+    });
+    const res = await app.request(`/clash?${qs}`);
+    expect(res.status).toBe(200);
+    const body = await res.text();
+    expect(body).toContain('MyReddit:');
+  });
+});
