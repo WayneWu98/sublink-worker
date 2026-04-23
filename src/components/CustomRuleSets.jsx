@@ -1,8 +1,12 @@
 /** @jsxRuntime automatic */
 /** @jsxImportSource hono/jsx */
 
+import { RULE_SET_PROVIDERS } from '../config/ruleSetProviders.js';
+
 export const CustomRuleSets = (props) => {
     const { t } = props;
+    const providersJson = JSON.stringify(RULE_SET_PROVIDERS);
+    const unsupportedLabel = t('ruleSetUrlPreviewUnsupported');
 
     return (
         <div x-data="customRuleSetsData()" class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
@@ -50,7 +54,7 @@ export const CustomRuleSets = (props) => {
                             </div>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div class="col-span-1 md:col-span-2">
-                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('customRuleOutboundName')}</label>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('ruleSetName')}</label>
                                     <input type="text" x-model="rule.name" placeholder="MyReddit" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
                                 </div>
                                 <div>
@@ -73,6 +77,25 @@ export const CustomRuleSets = (props) => {
                                 <div x-show="rule.provider !== 'custom'" class="col-span-1 md:col-span-2">
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('ruleSetFile')}</label>
                                     <input type="text" x-model="rule.file" placeholder="reddit" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+                                    <template x-if="rule.provider !== 'custom' && rule.file">
+                                        <div class="mt-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+                                            <p class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">{t('ruleSetUrlPreview')}</p>
+                                            <dl class="space-y-1 font-mono text-xs break-all">
+                                                <div class="flex gap-2">
+                                                    <dt class="shrink-0 text-gray-500 dark:text-gray-400 w-16">sing-box</dt>
+                                                    <dd class="text-gray-700 dark:text-gray-300" x-text="previewUrl(rule, 'singbox')"></dd>
+                                                </div>
+                                                <div class="flex gap-2">
+                                                    <dt class="shrink-0 text-gray-500 dark:text-gray-400 w-16">Clash</dt>
+                                                    <dd class="text-gray-700 dark:text-gray-300" x-text="previewUrl(rule, 'clash')"></dd>
+                                                </div>
+                                                <div class="flex gap-2">
+                                                    <dt class="shrink-0 text-gray-500 dark:text-gray-400 w-16">Surge</dt>
+                                                    <dd class="text-gray-700 dark:text-gray-300" x-text="previewUrl(rule, 'surge')"></dd>
+                                                </div>
+                                            </dl>
+                                        </div>
+                                    </template>
                                 </div>
                                 <template x-if="rule.provider === 'custom'">
                                     <div class="col-span-1 md:col-span-2 space-y-3">
@@ -121,12 +144,29 @@ export const CustomRuleSets = (props) => {
 
             <script dangerouslySetInnerHTML={{
                 __html: `
+                const RULE_SET_PROVIDERS = ${providersJson};
+                const UNSUPPORTED_LABEL = ${JSON.stringify(unsupportedLabel)};
+
+                function resolveProviderUrlClient(providerId, type, format, file) {
+                    const provider = RULE_SET_PROVIDERS[providerId];
+                    if (!provider) return null;
+                    const spec = provider.formats && provider.formats[format] && provider.formats[format][type];
+                    if (!spec) return null;
+                    const stem = spec.filePattern.replace(/\\{file\\}/g, file);
+                    return spec.base + stem + spec.ext;
+                }
+
                 function customRuleSetsData() {
                     return {
                         mode: 'form',
                         rules: [],
                         jsonContent: '[]',
                         jsonError: null,
+                        previewUrl(rule, format) {
+                            if (!rule || rule.provider === 'custom' || !rule.file) return '';
+                            const url = resolveProviderUrlClient(rule.provider, rule.type || 'site', format, rule.file);
+                            return url || UNSUPPORTED_LABEL;
+                        },
                         init() {
                             this.$watch('rules', (v) => {
                                 if (this.mode === 'form') this.jsonContent = JSON.stringify(v, null, 2);
