@@ -1,15 +1,17 @@
 import { BaseConfigBuilder } from './BaseConfigBuilder.js';
 import { groupProxiesByCountry } from '../utils.js';
 import { SURGE_CONFIG, SURGE_SITE_RULE_SET_BASEURL, SURGE_IP_RULE_SET_BASEURL, generateRules, getOutbounds, PREDEFINED_RULE_SETS, DIRECT_DEFAULT_RULES } from '../config/index.js';
+import { resolveCustomRuleSetUrl } from '../config/ruleGenerators.js';
 import { addProxyWithDedup } from './helpers/proxyHelpers.js';
 import { buildSelectorMembers, buildNodeSelectMembers, uniqueNames } from './helpers/groupBuilder.js';
 
 export class SurgeConfigBuilder extends BaseConfigBuilder {
-    constructor(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry, includeAutoSelect = true) {
+    constructor(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry, includeAutoSelect = true, customRuleSets = []) {
         const resolvedBaseConfig = baseConfig ?? SURGE_CONFIG;
         super(inputString, resolvedBaseConfig, lang, userAgent, groupByCountry, includeAutoSelect);
         this.selectedRules = selectedRules;
         this.customRules = customRules;
+        this.customRuleSets = customRuleSets || [];
         this.subscriptionUrl = null;
         this.countryGroupNames = [];
         this.manualGroupName = null;
@@ -377,7 +379,7 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
     }
 
     formatConfig() {
-        const rules = generateRules(this.selectedRules, this.customRules);
+        const rules = generateRules(this.selectedRules, this.customRules, this.customRuleSets);
         let finalConfig = [];
 
         if (this.subscriptionUrl) {
@@ -462,16 +464,29 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
             });
         });
 
-        rules.filter(rule => rule.site_rules[0] !== '').map(rule => {
+        rules.filter(rule => !rule._customRuleSet && rule.site_rules && rule.site_rules[0] !== '').map(rule => {
             rule.site_rules.forEach(site => {
                 finalConfig.push(`RULE-SET,${SURGE_SITE_RULE_SET_BASEURL}${site}.conf,${this.t('outboundNames.' + rule.outbound)}`);
             });
         });
 
-        rules.filter(rule => rule.ip_rules[0] !== '').map(rule => {
+        rules.filter(rule => !rule._customRuleSet && rule.ip_rules && rule.ip_rules[0] !== '').map(rule => {
             rule.ip_rules.forEach(ip => {
                 finalConfig.push(`RULE-SET,${SURGE_IP_RULE_SET_BASEURL}${ip}.txt,${this.t('outboundNames.' + rule.outbound)},no-resolve`);
             });
+        });
+
+        // customRuleSets: emit with resolved URL (skip when format-gated)
+        (this.customRuleSets || []).forEach(item => {
+            if (!item || !item.name || !item.type) return;
+            const url = resolveCustomRuleSetUrl(item, 'surge');
+            if (!url) return;
+            const outboundLabel = this.t('outboundNames.' + (item.outbound || 'Proxy'));
+            if (item.type === 'site') {
+                finalConfig.push(`RULE-SET,${url},${outboundLabel}`);
+            } else {
+                finalConfig.push(`RULE-SET,${url},${outboundLabel},no-resolve`);
+            }
         });
 
         rules.filter(rule => !!rule.ip_cidr).map(rule => {

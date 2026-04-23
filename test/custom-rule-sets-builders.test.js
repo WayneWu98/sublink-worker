@@ -28,3 +28,26 @@ describe('ClashConfigBuilder customRuleSets', () => {
     expect(yaml).toContain('/geosite/reddit.mrs');
   });
 });
+
+import { SurgeConfigBuilder } from '../src/builders/SurgeConfigBuilder.js';
+
+describe('SurgeConfigBuilder customRuleSets', () => {
+  it('emits RULE-SET line for metacubex customRuleSets', async () => {
+    const builder = new SurgeConfigBuilder(
+      SAMPLE, ['Non-China'], [], null, 'en', '', false, true,
+      [{ name: 'MyReddit', provider: 'metacubex', file: 'reddit', type: 'site', outbound: 'Proxy' }]
+    );
+    const text = await builder.build();
+    expect(text).toMatch(/RULE-SET,.*\/geosite\/reddit\.conf,/);
+  });
+
+  it('skips loyalsoldier (no surge format) without failing', async () => {
+    const builder = new SurgeConfigBuilder(
+      SAMPLE, ['Non-China'], [], null, 'en', '', false, true,
+      [{ name: 'LS', provider: 'loyalsoldier', file: 'proxy', type: 'site', outbound: 'Proxy' }]
+    );
+    const text = await builder.build();
+    expect(text).not.toContain('LS,');
+    expect(text).toContain('FINAL');
+  });
+});
