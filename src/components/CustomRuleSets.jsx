@@ -2,11 +2,19 @@
 /** @jsxImportSource hono/jsx */
 
 import { RULE_SET_PROVIDERS } from '../config/ruleSetProviders.js';
+import { UNIFIED_RULES } from '../config/rules.js';
 
 export const CustomRuleSets = (props) => {
     const { t } = props;
     const providersJson = JSON.stringify(RULE_SET_PROVIDERS);
     const unsupportedLabel = t('ruleSetUrlPreviewUnsupported');
+
+    // Static outbound targets that always exist (regardless of selectedRules)
+    const STATIC_OUTBOUNDS = ['Node Select', 'Auto Select', 'Fall Back', 'Manual Switch', 'DIRECT', 'REJECT'];
+    // Build translated-label map so the dropdown shows readable text
+    const outboundLabels = {};
+    STATIC_OUTBOUNDS.forEach((k) => { outboundLabels[k] = t('outboundNames.' + k); });
+    UNIFIED_RULES.forEach((r) => { outboundLabels[r.name] = t('outboundNames.' + r.name); });
 
     return (
         <div x-data="customRuleSetsData()" class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
@@ -115,7 +123,19 @@ export const CustomRuleSets = (props) => {
                                 </template>
                                 <div class="col-span-1 md:col-span-2">
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('ruleSetOutbound')}</label>
-                                    <input type="text" x-model="rule.outbound" placeholder="Proxy" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+                                    <select x-model="rule.outbound" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                                        <optgroup x-bind:label="'{t('outboundBuiltIn')}'">
+                                            <template x-for="key in STATIC_OUTBOUNDS" x-bind:key="key">
+                                                <option x-bind:value="key" x-text="OUTBOUND_LABELS[key] || key"></option>
+                                            </template>
+                                        </optgroup>
+                                        <optgroup x-bind:label="'{t('outboundSelectedGroups')}'" x-show="Array.isArray($root.selectedRules) && $root.selectedRules.length > 0">
+                                            <template x-for="key in ($root.selectedRules || [])" x-bind:key="key">
+                                                <option x-bind:value="key" x-text="OUTBOUND_LABELS[key] || key"></option>
+                                            </template>
+                                        </optgroup>
+                                    </select>
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('ruleSetOutboundHint')}</p>
                                 </div>
                             </div>
                         </div>
@@ -146,6 +166,8 @@ export const CustomRuleSets = (props) => {
                 __html: `
                 const RULE_SET_PROVIDERS = ${providersJson};
                 const UNSUPPORTED_LABEL = ${JSON.stringify(unsupportedLabel)};
+                const STATIC_OUTBOUNDS = ${JSON.stringify(STATIC_OUTBOUNDS)};
+                const OUTBOUND_LABELS = ${JSON.stringify(outboundLabels)};
 
                 function resolveProviderUrlClient(providerId, type, format, file) {
                     const provider = RULE_SET_PROVIDERS[providerId];
@@ -192,7 +214,7 @@ export const CustomRuleSets = (props) => {
                             this.rules.push({
                                 name: '', provider: 'metacubex', file: '',
                                 urls: { singbox: '', clash: '', surge: '' },
-                                type: 'site', outbound: 'Proxy'
+                                type: 'site', outbound: 'Node Select'
                             });
                         },
                         removeRule(i) { this.rules.splice(i, 1); },
