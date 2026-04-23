@@ -122,7 +122,7 @@ export const translations = {
       'Youtube': '📹 油管视频',
       'Google': '🔍 谷歌服务',
       'Private': '🏠 私有网络',
-      'Location:CN': '🔒 国内服务',
+      'Location:CN': '🔒 全球直连',
       'Telegram': '📲 电报消息',
       'Github': '🐱 Github',
       'Microsoft': 'Ⓜ️ 微软服务',
@@ -152,6 +152,8 @@ export const translations = {
       'Speedtest': '📊 测速服务',
       'Porn': '🔞 成人内容'
     },
+    fallbackOutbound: '漏网之鱼出站',
+    fallbackOutboundHint: '未命中任何规则时流量走哪里（默认：节点选择）',
     extendedRuleGroups: '扩展规则组',
     showMoreRuleGroups: '展开更多规则组',
     hideMoreRuleGroups: '收起',
@@ -371,6 +373,8 @@ export const translations = {
       'Speedtest': '📊 Speedtest',
       'Porn': '🔞 Adult Content'
     },
+    fallbackOutbound: 'Fall Back outbound',
+    fallbackOutboundHint: 'Where traffic goes when no rule matches (default: Node Select)',
     extendedRuleGroups: 'Extended rule groups',
     showMoreRuleGroups: 'Show more rule groups',
     hideMoreRuleGroups: 'Hide',
@@ -584,6 +588,8 @@ export const translations = {
       'Speedtest': '📊 تست سرعت',
       'Porn': '🔞 محتوای بزرگسال'
     },
+    fallbackOutbound: 'خروجی Fall Back',
+    fallbackOutboundHint: 'مقصد ترافیک در صورت عدم مطابقت با هیچ قانونی (پیش‌فرض: Node Select)',
     extendedRuleGroups: 'گروه‌های قوانین گسترده',
     showMoreRuleGroups: 'نمایش گروه‌های بیشتر',
     hideMoreRuleGroups: 'پنهان',
@@ -797,6 +803,8 @@ export const translations = {
       'Speedtest': '📊 Speedtest',
       'Porn': '🔞 Для взрослых'
     },
+    fallbackOutbound: 'Исходящий Fall Back',
+    fallbackOutboundHint: 'Куда направить трафик, не совпавший ни с одним правилом (по умолчанию: Node Select)',
     extendedRuleGroups: 'Расширенные группы правил',
     showMoreRuleGroups: 'Показать больше групп',
     hideMoreRuleGroups: 'Скрыть',

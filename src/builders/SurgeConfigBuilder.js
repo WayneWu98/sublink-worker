@@ -6,15 +6,22 @@ import { addProxyWithDedup } from './helpers/proxyHelpers.js';
 import { buildSelectorMembers, buildNodeSelectMembers, uniqueNames } from './helpers/groupBuilder.js';
 
 export class SurgeConfigBuilder extends BaseConfigBuilder {
-    constructor(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry, includeAutoSelect = true, customRuleSets = []) {
+    constructor(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry, includeAutoSelect = true, customRuleSets = [], fallbackOutbound = 'Node Select') {
         const resolvedBaseConfig = baseConfig ?? SURGE_CONFIG;
         super(inputString, resolvedBaseConfig, lang, userAgent, groupByCountry, includeAutoSelect);
         this.selectedRules = selectedRules;
         this.customRules = customRules;
         this.customRuleSets = customRuleSets || [];
+        this.fallbackOutbound = fallbackOutbound || 'Node Select';
         this.subscriptionUrl = null;
         this.countryGroupNames = [];
         this.manualGroupName = null;
+    }
+
+    resolveFallbackDefault() {
+        const raw = this.fallbackOutbound || 'Node Select';
+        if (raw === 'DIRECT' || raw === 'REJECT') return raw;
+        return this.t('outboundNames.' + raw);
     }
 
     setSubscriptionUrl(url) {
@@ -317,8 +324,12 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
     }
 
     addFallBackGroup(proxyList) {
-        const options = this.buildAggregatedOptions(proxyList);
+        let options = this.buildAggregatedOptions(proxyList);
         if (this.hasProxyGroup(this.t('outboundNames.Fall Back'))) return;
+        const def = this.resolveFallbackDefault();
+        if (def && options.includes(def)) {
+            options = [def, ...options.filter(o => o !== def)];
+        }
         this.config['proxy-groups'].push(
             this.createProxyGroup(this.t('outboundNames.Fall Back'), 'select', options)
         );

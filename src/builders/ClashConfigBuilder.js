@@ -47,7 +47,7 @@ function getClashUdpValue(proxy, defaultEnabled = true) {
 }
 
 export class ClashConfigBuilder extends BaseConfigBuilder {
-    constructor(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry = false, enableClashUI = false, externalController, externalUiDownloadUrl, includeAutoSelect = true, customRuleSets = []) {
+    constructor(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry = false, enableClashUI = false, externalController, externalUiDownloadUrl, includeAutoSelect = true, customRuleSets = [], fallbackOutbound = 'Node Select') {
         if (!baseConfig) {
             baseConfig = CLASH_CONFIG;
         }
@@ -55,11 +55,18 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
         this.selectedRules = selectedRules;
         this.customRules = customRules;
         this.customRuleSets = customRuleSets || [];
+        this.fallbackOutbound = fallbackOutbound || 'Node Select';
         this.countryGroupNames = [];
         this.manualGroupName = null;
         this.enableClashUI = enableClashUI;
         this.externalController = externalController;
         this.externalUiDownloadUrl = externalUiDownloadUrl;
+    }
+
+    resolveFallbackDefault() {
+        const raw = this.fallbackOutbound || 'Node Select';
+        if (raw === 'DIRECT' || raw === 'REJECT') return raw;
+        return this.t('outboundNames.' + raw);
     }
 
     /**
@@ -443,7 +450,11 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
     addFallBackGroup(proxyList) {
         const name = this.t('outboundNames.Fall Back');
         if (this.hasProxyGroup(name)) return;
-        const proxies = this.buildSelectGroupMembers(proxyList);
+        let proxies = this.buildSelectGroupMembers(proxyList);
+        const def = this.resolveFallbackDefault();
+        if (def && proxies.includes(def)) {
+            proxies = [def, ...proxies.filter(p => p !== def)];
+        }
         const group = {
             type: "select",
             name,

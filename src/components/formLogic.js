@@ -86,6 +86,7 @@ export const formLogicFn = (t) => {
             groupByCountry: false,
             includeAutoSelect: true,
             enableClashUI: false,
+            fallbackOutbound: 'Node Select',
             externalController: '',
             externalUiDownloadUrl: '',
             configType: 'singbox',
@@ -140,6 +141,7 @@ export const formLogicFn = (t) => {
                 this.groupByCountry = localStorage.getItem('groupByCountry') === 'true';
                 this.includeAutoSelect = localStorage.getItem('includeAutoSelect') !== 'false';
                 this.enableClashUI = localStorage.getItem('enableClashUI') === 'true';
+                this.fallbackOutbound = localStorage.getItem('fallbackOutbound') || 'Node Select';
                 this.externalController = localStorage.getItem('externalController') || '';
                 this.externalUiDownloadUrl = localStorage.getItem('externalUiDownloadUrl') || '';
                 this.customUA = localStorage.getItem('userAgent') || '';
@@ -171,6 +173,7 @@ export const formLogicFn = (t) => {
                 this.$watch('groupByCountry', val => localStorage.setItem('groupByCountry', val));
                 this.$watch('includeAutoSelect', val => localStorage.setItem('includeAutoSelect', val));
                 this.$watch('enableClashUI', val => localStorage.setItem('enableClashUI', val));
+                this.$watch('fallbackOutbound', val => localStorage.setItem('fallbackOutbound', val));
                 this.$watch('externalController', val => localStorage.setItem('externalController', val));
                 this.$watch('externalUiDownloadUrl', val => localStorage.setItem('externalUiDownloadUrl', val));
                 this.$watch('customUA', val => localStorage.setItem('userAgent', val));
@@ -235,6 +238,10 @@ export const formLogicFn = (t) => {
 
                 if (this.groupByCountry) {
                     params.append('group_by_country', 'true');
+                }
+
+                if (this.fallbackOutbound && this.fallbackOutbound !== 'Node Select') {
+                    params.append('fallback_outbound', this.fallbackOutbound);
                 }
 
                 // Include lang parameter so subconverter gets correct group names
@@ -406,6 +413,9 @@ export const formLogicFn = (t) => {
                     if (this.groupByCountry) params.append('group_by_country', 'true');
                     if (!this.includeAutoSelect) params.append('include_auto_select', 'false');
                     if (this.enableClashUI) params.append('enable_clash_ui', 'true');
+                    if (this.fallbackOutbound && this.fallbackOutbound !== 'Node Select') {
+                        params.append('fallback_outbound', this.fallbackOutbound);
+                    }
                     if (this.externalController) params.append('external_controller', this.externalController);
                     if (this.externalUiDownloadUrl) params.append('external_ui_download_url', this.externalUiDownloadUrl);
 
@@ -613,6 +623,10 @@ export const formLogicFn = (t) => {
                 this.groupByCountry = params.get('group_by_country') === 'true';
                 this.includeAutoSelect = params.get('include_auto_select') !== 'false';
                 this.enableClashUI = params.get('enable_clash_ui') === 'true';
+                const fbo = params.get('fallback_outbound');
+                if (fbo && ['Node Select', 'DIRECT', 'REJECT'].includes(fbo)) {
+                    this.fallbackOutbound = fbo;
+                }
 
                 const externalController = params.get('external_controller');
                 if (externalController) {
