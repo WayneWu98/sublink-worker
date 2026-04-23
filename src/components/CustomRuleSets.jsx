@@ -116,12 +116,12 @@ export const CustomRuleSets = (props) => {
                                 <div class="col-span-1 md:col-span-2">
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('ruleSetOutbound')}</label>
                                     <select x-model="rule.outbound" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                                        <option value="DIRECT">DIRECT</option>
-                                        <option value="REJECT">REJECT</option>
                                         <option value="Node Select">{t('outboundNames.Node Select')}</option>
                                         <option value="Auto Select">{t('outboundNames.Auto Select')}</option>
                                         <option value="Fall Back">{t('outboundNames.Fall Back')}</option>
                                         <option value="Manual Switch">{t('outboundNames.Manual Switch')}</option>
+                                        <option value="DIRECT">DIRECT</option>
+                                        <option value="REJECT">REJECT</option>
                                     </select>
                                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('ruleSetOutboundHint')}</p>
                                 </div>
@@ -200,7 +200,7 @@ export const CustomRuleSets = (props) => {
                             this.rules.push({
                                 name: '', provider: 'metacubex', file: '',
                                 urls: { singbox: '', clash: '', surge: '' },
-                                type: 'site', outbound: 'DIRECT'
+                                type: 'site', outbound: 'Node Select'
                             });
                         },
                         removeRule(i) { this.rules.splice(i, 1); },
