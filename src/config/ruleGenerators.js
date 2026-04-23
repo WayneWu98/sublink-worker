@@ -5,6 +5,24 @@
 
 import { UNIFIED_RULES, PREDEFINED_RULE_SETS, SITE_RULE_SETS, IP_RULE_SETS, CLASH_SITE_RULE_SETS, CLASH_IP_RULE_SETS } from './rules.js';
 import { SITE_RULE_SET_BASE_URL, IP_RULE_SET_BASE_URL, CLASH_SITE_RULE_SET_BASE_URL, CLASH_IP_RULE_SET_BASE_URL } from './ruleUrls.js';
+import { resolveProviderUrl } from './ruleSetProviders.js';
+
+/**
+ * Resolve the rule-set file URL for a customRuleSets entry under a given format.
+ * Returns null when the provider lacks the requested format (format-gated) or
+ * when provider === 'custom' and no URL was supplied for that format.
+ *
+ *   format: 'singbox' | 'clash' | 'surge'
+ */
+export function resolveCustomRuleSetUrl(item, format) {
+	if (!item || !item.type) return null;
+	if (item.provider === 'custom') {
+		const url = item.urls?.[format];
+		return (typeof url === 'string' && url.length > 0) ? url : null;
+	}
+	if (!item.file) return null;
+	return resolveProviderUrl(item.provider, item.type, format, item.file);
+}
 
 function toStringArray(value) {
 	if (Array.isArray(value)) {
@@ -29,7 +47,7 @@ export function getOutbounds(selectedRuleNames) {
 }
 
 // Helper function to generate rules based on selected rule names
-export function generateRules(selectedRules = [], customRules = []) {
+export function generateRules(selectedRules = [], customRules = [], customRuleSets = []) {
 	if (typeof selectedRules === 'string' && PREDEFINED_RULE_SETS[selectedRules]) {
 		selectedRules = PREDEFINED_RULE_SETS[selectedRules];
 	}
@@ -64,6 +82,19 @@ export function generateRules(selectedRules = [], customRules = []) {
 			src_ip_cidr: toStringArray(rule.src_ip_cidr),
 			protocol: toStringArray(rule.protocol),
 			outbound: rule.name
+		});
+	});
+
+	// customRuleSets: each item becomes a separate rule whose site/ip rule name
+	// equals the user-chosen group name. Builders read _customRuleSet to emit
+	// the rule-set URL via resolveCustomRuleSetUrl.
+	(customRuleSets || []).forEach((item) => {
+		if (!item || !item.name || !item.type) return;
+		rules.push({
+			site_rules: item.type === 'site' ? [item.name] : [],
+			ip_rules:   item.type === 'ip'   ? [item.name] : [],
+			outbound: item.outbound || 'Proxy',
+			_customRuleSet: item
 		});
 	});
 
