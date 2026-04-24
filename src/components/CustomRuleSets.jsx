@@ -9,9 +9,14 @@ export const CustomRuleSets = (props) => {
     const providersJson = JSON.stringify(RULE_SET_PROVIDERS);
     const unsupportedLabel = t('ruleSetUrlPreviewUnsupported');
 
+    // Strip the decorative emoji prefix so dropdown options render cleanly.
+    const stripEmoji = (s) => typeof s === 'string'
+        ? s.replace(/^[^\s\w一-鿿]+\s*/u, '')
+        : s;
+
     // Translate-label map used when rendering rule-group options in the outbound dropdown
     const outboundLabels = {};
-    UNIFIED_RULES.forEach((r) => { outboundLabels[r.name] = t('outboundNames.' + r.name); });
+    UNIFIED_RULES.forEach((r) => { outboundLabels[r.name] = stripEmoji(t('outboundNames.' + r.name)); });
 
     return (
         <div x-data="customRuleSetsData()" class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
@@ -122,10 +127,10 @@ export const CustomRuleSets = (props) => {
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('ruleSetOutbound')}</label>
                                     <select x-model="rule.outbound" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                                         <optgroup label={t('outboundBuiltIn')}>
-                                            <option value="Node Select">{t('outboundNames.Node Select')}</option>
-                                            <option value="Auto Select">{t('outboundNames.Auto Select')}</option>
-                                            <option value="Fall Back">{t('outboundNames.Fall Back')}</option>
-                                            <option value="Manual Switch">{t('outboundNames.Manual Switch')}</option>
+                                            <option value="Node Select">{stripEmoji(t('outboundNames.Node Select'))}</option>
+                                            <option value="Auto Select">{stripEmoji(t('outboundNames.Auto Select'))}</option>
+                                            <option value="Fall Back">{stripEmoji(t('outboundNames.Fall Back'))}</option>
+                                            <option value="Manual Switch">{stripEmoji(t('outboundNames.Manual Switch'))}</option>
                                             <option value="DIRECT">DIRECT</option>
                                             <option value="REJECT">REJECT</option>
                                         </optgroup>

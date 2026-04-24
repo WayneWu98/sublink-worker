@@ -260,7 +260,7 @@ export const Form = (props) => {
                 <div class="flex items-center justify-between gap-4">
                   <span class="font-medium text-gray-700 dark:text-gray-300">{t('fallbackOutbound')}</span>
                   <select x-model="fallbackOutbound" class="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent">
-                    <option value="Node Select">{t('outboundNames.Node Select')}</option>
+                    <option value="Node Select">{(t('outboundNames.Node Select') || '').replace(/^[^\s\w一-鿿]+\s*/u, '')}</option>
                     <option value="DIRECT">DIRECT</option>
                     <option value="REJECT">REJECT</option>
                   </select>
