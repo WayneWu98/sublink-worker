@@ -107,7 +107,7 @@ export const CustomRules = (props) => {
                     </optgroup>
                     <optgroup x-bind:label="'{t('outboundSelectedRules')}'" x-show="($root.selectedRules || []).length > 0">
                         <template x-for="key in ($root.selectedRules || [])" x-bind:key="key">
-                            <option x-bind:value="key" x-text="OUTBOUND_LABELS[key] || key"></option>
+                            <option x-bind:value="key" x-text="CR_OUTBOUND_LABELS[key] || key"></option>
                         </template>
                     </optgroup>
                     <optgroup x-bind:label="'{t('outboundPriorRulesets')}'" x-show="customRuleSetNames().length > 0">
@@ -282,7 +282,7 @@ export const CustomRules = (props) => {
 
         <script dangerouslySetInnerHTML={{
             __html: `
-        const OUTBOUND_LABELS = ${JSON.stringify(outboundLabels)};
+        const CR_OUTBOUND_LABELS = ${JSON.stringify(outboundLabels)};
         const CR_STATIC_OUTBOUND_VALUES = ['Node Select', 'Auto Select', 'Fall Back', 'Manual Switch', 'DIRECT', 'REJECT'];
 
         function readSiblingCustomRuleSets() {
