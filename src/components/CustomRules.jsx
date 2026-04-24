@@ -91,7 +91,7 @@ export const CustomRules = (props) => {
             {/* Outbound target (was free-text 'name'; now a dropdown of valid outbounds) */}
             <div class="col-span-1 md:col-span-2">
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('customRuleOutboundName')}
+                    {t('ruleSetOutbound')}
                 </label>
                 <select
                     x-model="rule.name"
