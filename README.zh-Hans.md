@@ -137,6 +137,11 @@ Sing-Box · Clash · Xray/V2Ray · Surge
 
 ## 🗒️ 更新日志
 
+### v2.9.1
+
+- **修复**：名字叫 `DIRECT` / `REJECT` / `PASS` 等保留词的自定义规则或自定义规则集不再错误地生成同名策略组。Surge 之前会直接报"策略组不可以使用内部策略名"；其他客户端则会静默把内置动作替换成自建选择器。
+- 去除 Surge `[Proxy]` 段里多余的 `DIRECT = direct` 这一行。
+
 ### v2.9.0
 
 - **15 个扩展规则组**，默认折叠在展开面板里（Discord / WhatsApp / Signal / Line / Zoom / Spotify / News / Reddit / Twitch / Pixiv / Developer / OpenAI / Anthropic / Speedtest / Porn），预设保持不变。

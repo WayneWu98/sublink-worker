@@ -1,6 +1,6 @@
 import yaml from 'js-yaml';
 import { CLASH_CONFIG, generateRules, generateClashRuleSets, getOutbounds, PREDEFINED_RULE_SETS, DIRECT_DEFAULT_RULES } from '../config/index.js';
-import { BaseConfigBuilder } from './BaseConfigBuilder.js';
+import { BaseConfigBuilder, RESERVED_OUTBOUNDS } from './BaseConfigBuilder.js';
 import { deepCopy, groupProxiesByCountry } from '../utils.js';
 import { addProxyWithDedup } from './helpers/proxyHelpers.js';
 import { buildSelectorMembers, buildNodeSelectMembers, uniqueNames } from './helpers/groupBuilder.js';
@@ -419,6 +419,8 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
     addCustomRuleGroups(proxyList) {
         if (Array.isArray(this.customRules)) {
             this.customRules.forEach(rule => {
+                // Skip built-in outbound names to avoid shadowing them with a same-named group.
+                if (RESERVED_OUTBOUNDS.has(String(rule.name || '').toUpperCase())) return;
                 const name = this.t(`outboundNames.${rule.name}`);
                 if (!this.hasProxyGroup(name)) {
                     // Custom rules should not include country groups as direct proxies
@@ -452,6 +454,7 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
             if (!item || !item.type) return;
             const name = (item.name && item.name.trim()) || (item.file && item.file.trim());
             if (!name) return;
+            if (RESERVED_OUTBOUNDS.has(name.toUpperCase())) return;
             if (this.hasProxyGroup(name)) return;
             let proxies = this.buildSelectGroupMembers(proxyList);
             const def = this.resolveCustomRuleSetDefault(item);

@@ -1,6 +1,6 @@
 
 import { SING_BOX_CONFIG, generateRuleSets, generateRules, getOutbounds, PREDEFINED_RULE_SETS, DIRECT_DEFAULT_RULES } from '../config/index.js';
-import { BaseConfigBuilder } from './BaseConfigBuilder.js';
+import { BaseConfigBuilder, RESERVED_OUTBOUNDS } from './BaseConfigBuilder.js';
 import { deepCopy, groupProxiesByCountry } from '../utils.js';
 import { addProxyWithDedup } from './helpers/proxyHelpers.js';
 import { buildSelectorMembers as buildSelectorMemberList, buildNodeSelectMembers, uniqueNames } from './helpers/groupBuilder.js';
@@ -231,6 +231,8 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
     addCustomRuleGroups(proxyList) {
         if (Array.isArray(this.customRules)) {
             this.customRules.forEach(rule => {
+                // Skip built-in outbound names to avoid shadowing them with a same-named group.
+                if (RESERVED_OUTBOUNDS.has(String(rule.name || '').toUpperCase())) return;
                 const includeAutoSelect = this.includeAutoSelect && this.hasAutoSelectCandidates(proxyList);
                 // Custom rules should not include country groups as direct outbounds
                 // to prevent them from acting as global proxies.
@@ -257,6 +259,7 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
             if (!item || !item.type) return;
             const name = (item.name && item.name.trim()) || (item.file && item.file.trim());
             if (!name) return;
+            if (RESERVED_OUTBOUNDS.has(name.toUpperCase())) return;
             if (this.hasOutboundTag(name)) return;
             const members = this.buildSelectorMembers(proxyList);
             const def = this.resolveCustomRuleSetDefault(item);

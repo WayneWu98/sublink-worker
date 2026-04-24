@@ -3,6 +3,19 @@ import { deepCopy, tryDecodeSubscriptionLines, decodeBase64 } from '../utils.js'
 import { createTranslator } from '../i18n/index.js';
 import { generateRules, getOutbounds, PREDEFINED_RULE_SETS } from '../config/index.js';
 
+// Names that resolve to built-in outbounds across Clash / Sing-box / Surge.
+// Custom rules whose name collides with these must NOT generate a same-named
+// selector group, otherwise traffic gets silently redirected to the group
+// instead of the built-in outbound (e.g. DIRECT rule ends up going via proxy).
+export const RESERVED_OUTBOUNDS = new Set([
+    'DIRECT',
+    'REJECT',
+    'REJECT-DROP',
+    'REJECT-TINYGIF',
+    'REJECT-NO-DROP',
+    'PASS',
+]);
+
 export class BaseConfigBuilder {
     constructor(inputString, baseConfig, lang, userAgent, groupByCountry = false, includeAutoSelect = true) {
         this.inputString = inputString;

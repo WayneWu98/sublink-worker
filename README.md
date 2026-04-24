@@ -137,6 +137,11 @@ The Fall Back selector's default member (what unmatched traffic uses until the u
 
 ## 🗒️ Changelog
 
+### v2.9.1
+
+- **Bug fix**: custom rules / rule sets named after a reserved outbound (e.g. `DIRECT`, `REJECT`, `PASS`) no longer generate a same-named selector group. Surge previously rejected the config with "策略组不可以使用内部策略名"; other clients silently shadowed the built-in action.
+- Dropped the redundant `DIRECT = direct` line from Surge's `[Proxy]` section.
+
 ### v2.9.0
 
 - **15 extended rule groups** behind a collapsed disclosure (Discord, WhatsApp, Signal, Line, Zoom, Spotify, News, Reddit, Twitch, Pixiv, Developer, OpenAI, Anthropic, Speedtest, Porn). Presets are unchanged.
