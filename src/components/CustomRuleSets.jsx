@@ -49,11 +49,25 @@ export const CustomRuleSets = (props) => {
                 </template>
 
                 <div class="space-y-4">
-                    <template x-for="(rule, index) in rules" x-bind:key="index">
-                        <div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                    <template x-for="(rule, index) in rules" x-bind:key="rule.__uid || index">
+                        <div
+                            x-data="{ show: false }"
+                            x-init="$nextTick(() => show = true)"
+                            x-show="show"
+                            class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-200 dark:border-gray-700 transition-all duration-200 hover:border-primary-200 dark:hover:border-primary-900/50"
+                            {...{
+                                'x-transition:enter': 'transition ease-out duration-300',
+                                'x-transition:enter-start': 'opacity-0 -translate-y-2 scale-95',
+                                'x-transition:enter-end': 'opacity-100 translate-y-0 scale-100',
+                                'x-transition:leave': 'transition ease-in duration-200',
+                                'x-transition:leave-start': 'opacity-100 translate-y-0 scale-100',
+                                'x-transition:leave-end': 'opacity-0 translate-y-2 scale-95',
+                                'x-on:custom-rule-sets-clear.window': 'show = false'
+                            }}
+                        >
                             <div class="flex justify-between items-center mb-4">
                                 <h3 class="font-medium text-gray-900 dark:text-white" x-text="'#' + (index + 1) + ' ' + (rule.name || '(unnamed)')"></h3>
-                                <button type="button" x-on:click="removeRule(index)" class="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20">
+                                <button type="button" x-on:click="show = false; setTimeout(() => removeRule(index), 200)" class="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
                             </div>
@@ -174,6 +188,8 @@ export const CustomRuleSets = (props) => {
                 const OUTBOUND_LABELS = ${JSON.stringify(outboundLabels)};
                 const STATIC_OUTBOUND_VALUES = ['Node Select', 'Auto Select', 'Fall Back', 'Manual Switch', 'DIRECT', 'REJECT'];
 
+                const crsUid = () => (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : 'rs_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2);
+
                 function readFormSelectedRules() {
                     const boxes = document.querySelectorAll('input[type="checkbox"][x-model="selectedRules"]');
                     const out = [];
@@ -234,15 +250,17 @@ export const CustomRuleSets = (props) => {
                                 if (this.mode === 'json') {
                                     try {
                                         const parsed = JSON.parse(v);
-                                        if (Array.isArray(parsed)) { this.rules = parsed; this.jsonError = null; }
-                                        else this.jsonError = 'must be array';
+                                        if (Array.isArray(parsed)) {
+                                            this.rules = parsed.map(r => ({ __uid: r.__uid || crsUid(), ...r }));
+                                            this.jsonError = null;
+                                        } else this.jsonError = 'must be array';
                                     } catch (e) { this.jsonError = e.message; }
                                 }
                             });
                             window.addEventListener('restore-custom-rule-sets', (event) => {
                                 if (event.detail && Array.isArray(event.detail.rules)) {
-                                    this.rules = event.detail.rules;
-                                    this.jsonContent = JSON.stringify(event.detail.rules, null, 2);
+                                    this.rules = event.detail.rules.map(r => ({ __uid: r.__uid || crsUid(), ...r }));
+                                    this.jsonContent = JSON.stringify(this.rules, null, 2);
                                     this.mode = 'json';
                                 }
                             });
@@ -251,6 +269,7 @@ export const CustomRuleSets = (props) => {
                         },
                         addRule() {
                             this.rules.push({
+                                __uid: crsUid(),
                                 name: '', provider: 'metacubex', file: '',
                                 urls: { singbox: '', clash: '', surge: '' },
                                 type: 'site', outbound: 'Node Select'
@@ -268,8 +287,11 @@ export const CustomRuleSets = (props) => {
                         },
                         clearAll() {
                             if (!confirm('${t('confirmClearAllRules')}')) return;
-                            this.rules = [];
-                            this.jsonContent = '[]';
+                            this.$dispatch('custom-rule-sets-clear');
+                            setTimeout(() => {
+                                this.rules = [];
+                                this.jsonContent = '[]';
+                            }, 200);
                         }
                     }
                 }

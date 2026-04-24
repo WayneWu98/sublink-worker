@@ -57,7 +57,7 @@ export const CustomRules = (props) => {
         </template>
 
     <div class="space-y-4">
-        <template x-for="(rule, index) in rules" x-bind:key="index">
+        <template x-for="(rule, index) in rules" x-bind:key="rule.__uid || index">
         <div
           x-data="{ show: false }"
           x-init="$nextTick(() => show = true)"
@@ -285,6 +285,8 @@ export const CustomRules = (props) => {
         const CR_OUTBOUND_LABELS = ${JSON.stringify(outboundLabels)};
         const CR_STATIC_OUTBOUND_VALUES = ['Node Select', 'Auto Select', 'Fall Back', 'Manual Switch', 'DIRECT', 'REJECT'];
 
+        const crUid = () => (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : 'r_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2);
+
         function readFormSelectedRules() {
           const boxes = document.querySelectorAll('input[type="checkbox"][x-model="selectedRules"]');
           const out = [];
@@ -347,7 +349,7 @@ export const CustomRules = (props) => {
                   try {
                     const parsed = JSON.parse(value);
                     if (Array.isArray(parsed)) {
-                      this.rules = parsed;
+                      this.rules = parsed.map(r => ({ __uid: r.__uid || crUid(), ...r }));
                       this.jsonError = null;
                       this.jsonValid = true;
                       setTimeout(() => this.jsonValid = false, 3000);
@@ -363,8 +365,8 @@ export const CustomRules = (props) => {
               // Listen for custom event to restore rules from URL parsing
               window.addEventListener('restore-custom-rules', (event) => {
                 if (event.detail && Array.isArray(event.detail.rules)) {
-                  this.rules = event.detail.rules;
-                  this.jsonContent = JSON.stringify(event.detail.rules, null, 2);
+                  this.rules = event.detail.rules.map(r => ({ __uid: r.__uid || crUid(), ...r }));
+                  this.jsonContent = JSON.stringify(this.rules, null, 2);
                   this.mode = 'json'; // Switch to JSON mode to show imported rules
                 }
               });
@@ -379,6 +381,7 @@ export const CustomRules = (props) => {
 
             addRule() {
               this.rules.push({
+                __uid: crUid(),
                 name: 'Node Select',
                 domain: '',
                 domain_suffix: '',
