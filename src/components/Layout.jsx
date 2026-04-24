@@ -112,7 +112,9 @@ export const Layout = (props) => {
 
           [x-cloak] { display: none !important; }
 
-          /* Custom dropdown arrow — replace the native OS chevron with a clean SVG */
+          /* Custom dropdown arrow — replace the native OS chevron with a clean SVG.
+             padding-right uses !important so it wins over Tailwind's px-* utilities
+             that otherwise cap the right padding and let the SVG overlap option text. */
           select {
             -webkit-appearance: none;
             -moz-appearance: none;
@@ -121,7 +123,7 @@ export const Layout = (props) => {
             background-repeat: no-repeat;
             background-position: right 0.75rem center;
             background-size: 1rem 1rem;
-            padding-right: 2.25rem;
+            padding-right: 2.5rem !important;
           }
           .dark select,
           html.dark select {
