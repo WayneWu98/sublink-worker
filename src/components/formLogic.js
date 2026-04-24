@@ -141,7 +141,8 @@ export const formLogicFn = (t) => {
                 this.groupByCountry = localStorage.getItem('groupByCountry') === 'true';
                 this.includeAutoSelect = localStorage.getItem('includeAutoSelect') !== 'false';
                 this.enableClashUI = localStorage.getItem('enableClashUI') === 'true';
-                this.fallbackOutbound = localStorage.getItem('fallbackOutbound') || 'Node Select';
+                const savedFbo = localStorage.getItem('fallbackOutbound');
+                this.fallbackOutbound = ['Node Select', 'DIRECT', 'REJECT'].includes(savedFbo) ? savedFbo : 'Node Select';
                 this.externalController = localStorage.getItem('externalController') || '';
                 this.externalUiDownloadUrl = localStorage.getItem('externalUiDownloadUrl') || '';
                 this.customUA = localStorage.getItem('userAgent') || '';

@@ -179,7 +179,7 @@ export const CustomRuleSets = (props) => {
                 <p x-show="jsonError" class="mt-2 text-sm text-red-600 dark:text-red-400" x-text="jsonError"></p>
             </div>
 
-            <input type="hidden" name="customRuleSets" x-bind:value="JSON.stringify(rules)" />
+            <input type="hidden" name="customRuleSets" x-bind:value="JSON.stringify(rules, (k, v) => k === '__uid' ? undefined : v)" />
 
             <script dangerouslySetInnerHTML={{
                 __html: `

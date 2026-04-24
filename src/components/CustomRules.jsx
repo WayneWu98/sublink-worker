@@ -278,7 +278,7 @@ export const CustomRules = (props) => {
       </div>
 
     {/* Hidden input to store the final JSON for form submission */ }
-    <input type="hidden" name="customRules" x-bind:value="JSON.stringify(rules)" />
+    <input type="hidden" name="customRules" x-bind:value="JSON.stringify(rules, (k, v) => k === '__uid' ? undefined : v)" />
 
         <script dangerouslySetInnerHTML={{
             __html: `
