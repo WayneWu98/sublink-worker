@@ -174,9 +174,21 @@ export const CustomRules = (props) => {
 
             {/* IP CIDR */}
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('customRuleIPCIDR')}
-                </label>
+                <div class="flex items-center justify-between mb-1 gap-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {t('customRuleIPCIDR')}
+                    </label>
+                    <div class="inline-flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+                        <label class="inline-flex items-center gap-1.5 cursor-pointer select-none">
+                            <div class="relative inline-flex items-center">
+                                <input type="checkbox" x-model="rule.resolve_ip" class="sr-only peer" />
+                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-primary-600"></div>
+                            </div>
+                            <span>{t('customRuleResolveIP')}</span>
+                        </label>
+                        <i class="fas fa-info-circle text-gray-400 hover:text-primary-500 cursor-help" title={t('customRuleResolveIPTooltip')}></i>
+                    </div>
+                </div>
                 <input
                     type="text"
                     x-model="rule.ip_cidr"
@@ -388,6 +400,7 @@ export const CustomRules = (props) => {
                 domain_keyword: '',
                 src_ip_cidr: '',
                 ip_cidr: '',
+                resolve_ip: false,
                 protocol: '',
                 site: '',
                 ip: '',

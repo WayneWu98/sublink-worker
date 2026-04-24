@@ -42,12 +42,13 @@ This is a community fork of **[7Sageer/sublink-worker](https://github.com/7Sagee
 
 **Differences from upstream (at the time of writing):**
 
-- **Short-link token auth (v2.5+)** — `/shorten-v2` returns `{code, token}`; overwriting an existing short code requires the matching `X-Shortlink-Token` header. See details below.
-- **Short code loader UI + `/resolve` read auth (v2.6+)** — Explicit "Load from Code" button replaces the removed paste-auto-parse flow; `/resolve` now authenticates new-format entries. See details below.
-- **Surge `#!MANAGED-CONFIG` short-URL preservation (v2.7+)** — Surge configs fetched via a short link embed the short URL in `MANAGED-CONFIG` so short-code remaps propagate without client reconfiguration. See details below.
-- **Rule groups expansion (v2.9+)** — 15 extended built-in rule groups, subscribable Custom RuleSets backed by a provider dictionary (MetaCubeX / blackmatrix7 / Loyalsoldier / ACL4SSR / custom URL) that each register their own proxy group, Custom Rules outbound as a dropdown of valid targets, configurable Fall Back default, and `customRuleSets` + `fallback_outbound` share-URL params. See the Rule Groups and Changelog sections below.
+- **Short-link token auth (v2.5+)** — `/shorten-v2` returns `{code, token}`; overwriting an existing short code requires the matching `X-Shortlink-Token` header.
+- **Short code loader UI + `/resolve` read auth (v2.6+)** — Explicit "Load from Code" button replaces the removed paste-auto-parse flow; `/resolve` now authenticates new-format entries.
+- **Surge `#!MANAGED-CONFIG` short-URL preservation (v2.7+)** — Surge configs fetched via a short link embed the short URL in `MANAGED-CONFIG` so short-code remaps propagate without client reconfiguration.
+- **Rule groups expansion (v2.9+)** — 15 extended built-in rule groups, subscribable Custom RuleSets backed by a provider dictionary (MetaCubeX / blackmatrix7 / Loyalsoldier / ACL4SSR / custom URL) that each register their own proxy group, Custom Rules outbound as a dropdown of valid targets, configurable Fall Back default, and `customRuleSets` + `fallback_outbound` share-URL params.
+- **Per-rule `no-resolve` toggle for Custom Rules IP CIDR (v2.9.2+)** — Upstream hard-codes `no-resolve` on every user-defined `IP-CIDR` rule, which silently bypasses the rule whenever the client hands the rule engine a hostname instead of an IP (common with Surge's system proxy / HTTPS CONNECT). A switch next to the IP CIDR field drops that flag per rule so the client resolves DNS and the rule actually matches. Default off preserves upstream behavior. Affects Clash / mihomo / Surge output.
 
-Version-specific sections further down in this README contain the migration notes for each change.
+See the Changelog below for detailed release notes and migration guidance for each change.
 
 ## ⚠️ Data Retention Notice
 
@@ -137,6 +138,10 @@ The Fall Back selector's default member (what unmatched traffic uses until the u
 
 ## 🗒️ Changelog
 
+### v2.9.2
+
+- **Per-rule `no-resolve` toggle for Custom Rules IP CIDR.** Upstream emits every user-defined `IP-CIDR` rule with `no-resolve` hard-coded, so the rule silently never matches when the client evaluates rules against a hostname instead of an IP (common with Surge's system proxy / HTTPS CONNECT — traffic falls through to Final). This fork adds a switch next to each custom rule's IP CIDR field that drops the `no-resolve` flag when enabled, letting the client resolve DNS so the IP rule can actually match. Default off preserves upstream behavior. Affects Clash / mihomo / Surge output; sing-box has no equivalent flag and is unchanged.
+
 ### v2.9.1
 
 - **Bug fix**: custom rules / rule sets named after a reserved outbound (e.g. `DIRECT`, `REJECT`, `PASS`) no longer generate a same-named selector group. Surge previously rejected the config with "策略组不可以使用内部策略名"; other clients silently shadowed the built-in action.
@@ -149,6 +154,38 @@ The Fall Back selector's default member (what unmatched traffic uses until the u
 - **Custom Rules outbound** is now a dropdown of valid outbounds (built-in + selected rule groups + custom rule sets) instead of a free-text group name.
 - **Fall Back outbound** preference (Node Select / DIRECT / REJECT).
 - Global `<select>` chevron + consistent padding, animated row add/delete, auto-reset of referenced outbounds when the source is removed.
+
+### v2.7
+
+**Surge `#!MANAGED-CONFIG` short-URL preservation.** Surge responses previously embedded the long converter URL (e.g. `/surge?config=...`) in their `#!MANAGED-CONFIG` directive.
+
+- When a Surge client subscribes via a short link (`/s/:code`), the returned config's `#!MANAGED-CONFIG` line now points at the **short URL** (e.g. `https://<host>/s/abc123`). The client stays pinned to the short link; subsequent `/shorten-v2` overwrites of the same code are automatically picked up on the next client refresh, with no manual reconfiguration.
+- Direct access to `/surge?config=...` (no short link involved) is unchanged — the long request URL is written into `MANAGED-CONFIG`.
+- A new optional query parameter `sub_url` is accepted by `/surge`. It must be a **same-origin** absolute URL; cross-origin or malformed values are silently ignored (stripped from the fallback URL) to prevent malicious URL override.
+
+**One-time migration for existing subscribers:** Surge clients already pinned to the long URL (from an earlier build) will not auto-migrate. Re-enter the short URL in Surge once to pick up the new behavior.
+
+### v2.6
+
+**Short code loader UI + `/resolve` read authentication.** Building on v2.5's token system.
+
+- **New UI entry point**: a "Load from Code" button appears to the left of Paste/Clear on the main input. It opens a modal accepting a short code and optional token, then loads the original subscription configuration back into the form and captures the token so a subsequent "Shorten" call overwrites the same short code.
+- **`/resolve` is now conditionally authenticated**: entries created under v2.5+ require the matching `X-Shortlink-Token` header. Missing token → 401 (reason `missing`). Wrong token → 403 (reason `mismatch`). Legacy entries (created before v2.5) remain anonymously readable.
+- **Auto-parse of pasted short URLs has been removed.** Pasting a short URL (e.g. `https://<host>/b/<code>`) into the main input textarea no longer fetches and populates the form. Use the new "Load from Code" button instead.
+- **`/b/:code`, `/c/:code`, `/x/:code`, `/s/:code` redirect endpoints are unchanged** — they continue to resolve anonymously so existing short links on the open internet keep working.
+
+Migration: any external tooling that called `/resolve` on a new-format short code must now supply `X-Shortlink-Token`.
+
+### v2.5
+
+**Short link token authentication** on the `/shorten-v2` endpoint.
+
+- **Response is now JSON** (previously `text/plain`). Shape: `{ "code": "<shortcode>", "token": "<32-hex-token>" }`.
+- **Overwriting an existing short code requires** sending the `X-Shortlink-Token: <token>` header. The token is returned exactly once, on creation — save it.
+- **Legacy short links** (created before this version) are tokenless. The first caller who references such a short code will claim it and receive a fresh token; after that, subsequent overwrites require that token.
+- **403 responses** (JSON `{ error, reason }` with `reason` being `missing` or `mismatch`) are returned when authorization fails.
+
+Migration: external scripts that read `/shorten-v2` response as text must parse JSON and handle the new `token` field.
 
 ## 🤝 Contributing
 
@@ -182,38 +219,6 @@ This project is for learning and exchange purposes only. Please do not use it fo
 </table>
   <p>If you would like to sponsor this project, please contact the developer <a href="https://github.com/7Sageer" style="text-decoration: none;">@7Sageer</a></p>
 </div>
-
-## 🔐 Short Link Token Authentication (v2.5+)
-
-As of v2.5, the `/shorten-v2` endpoint:
-
-- **Response is now JSON** (previously `text/plain`). Shape: `{ "code": "<shortcode>", "token": "<32-hex-token>" }`.
-- **Overwriting an existing short code requires** sending the `X-Shortlink-Token: <token>` header. The token is returned exactly once, on creation — save it.
-- **Legacy short links** (created before this version) are tokenless. The first caller who references such a short code will claim it and receive a fresh token; after that, subsequent overwrites require that token.
-- **403 responses** (JSON `{ error, reason }` with `reason` being `missing` or `mismatch`) are returned when authorization fails.
-
-Migration: external scripts that read `/shorten-v2` response as text must parse JSON and handle the new `token` field.
-
-## 🔐 Short Code Loader + Read Authentication (v2.6+)
-
-Building on v2.5's token system:
-
-- **New UI entry point**: a "Load from Code" button appears to the left of Paste/Clear on the main input. It opens a modal accepting a short code and optional token, then loads the original subscription configuration back into the form and captures the token so a subsequent "Shorten" call overwrites the same short code.
-- **`/resolve` is now conditionally authenticated**: entries created under v2.5+ require the matching `X-Shortlink-Token` header. Missing token → 401 (reason `missing`). Wrong token → 403 (reason `mismatch`). Legacy entries (created before v2.5) remain anonymously readable.
-- **Auto-parse of pasted short URLs has been removed**. Pasting a short URL (e.g. `https://<host>/b/<code>`) into the main input textarea no longer fetches and populates the form. Use the new "Load from Code" button instead.
-- **`/b/:code`, `/c/:code`, `/x/:code`, `/s/:code` redirect endpoints are unchanged** — they continue to resolve anonymously so existing short links on the open internet keep working.
-
-Migration: any external tooling that called `/resolve` on a new-format short code must now supply `X-Shortlink-Token`.
-
-## 🔐 Surge `#!MANAGED-CONFIG` Short-URL Preservation (v2.7+)
-
-Surge responses previously embedded the long converter URL (e.g. `/surge?config=...`) in their `#!MANAGED-CONFIG` directive. As of v2.7:
-
-- When a Surge client subscribes via a short link (`/s/:code`), the returned config's `#!MANAGED-CONFIG` line now points at the **short URL** (e.g. `https://<host>/s/abc123`). The client stays pinned to the short link; subsequent `/shorten-v2` overwrites of the same code are automatically picked up on the next client refresh, with no manual reconfiguration.
-- Direct access to `/surge?config=...` (no short link involved) is unchanged — the long request URL is written into `MANAGED-CONFIG`.
-- A new optional query parameter `sub_url` is accepted by `/surge`. It must be a **same-origin** absolute URL; cross-origin or malformed values are silently ignored (stripped from the fallback URL) to prevent malicious URL override.
-
-**One-time migration for existing subscribers:** Surge clients already pinned to the long URL (from an earlier build) will not auto-migrate. Re-enter the short URL in Surge once to pick up the new behavior.
 
 ## ⭐ Star History
 

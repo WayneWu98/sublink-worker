@@ -57,8 +57,9 @@ export function emitClashRules(rules = [], translator) {
     rules
         .filter(rule => Array.isArray(rule.ip_cidr) && rule.ip_cidr.length > 0)
         .forEach(rule => {
+            const suffix = rule.resolve_ip ? '' : ',no-resolve';
             rule.ip_cidr.forEach(cidr => {
-                results.push(`IP-CIDR,${cidr},${translator('outboundNames.' + rule.outbound)},no-resolve`);
+                results.push(`IP-CIDR,${cidr},${translator('outboundNames.' + rule.outbound)}${suffix}`);
             });
         });
 

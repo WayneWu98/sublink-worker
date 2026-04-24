@@ -42,12 +42,13 @@
 
 **与上游的差异（截至撰写时）：**
 
-- **短链 Token 鉴权（v2.5+）** —— `/shorten-v2` 返回 `{code, token}`；覆盖已存在的短码需要携带匹配的 `X-Shortlink-Token` 请求头。详见下文。
-- **短码加载 UI + `/resolve` 读取鉴权（v2.6+）** —— 新增显式的「通过短码加载」按钮，取代原先粘贴自动解析的流程；`/resolve` 对新格式条目启用鉴权。详见下文。
-- **Surge `#!MANAGED-CONFIG` 短链保留（v2.7+）** —— 通过短链获取的 Surge 配置会在 `MANAGED-CONFIG` 指令中保留短链 URL，短码重新映射可自动生效，无需在客户端重新配置。详见下文。
-- **规则组扩展（v2.9+）** —— 新增 15 个内置扩展规则组；可订阅的「自定义规则集」支持 MetaCubeX / blackmatrix7 / Loyalsoldier / ACL4SSR / 自定义 URL 五种源，每条自动生成独立策略组；自定义规则的「出站」改为下拉选择有效目标；新增「漏网之鱼出站」设置；分享链接新增 `customRuleSets` 和 `fallback_outbound` 参数。详见下方「规则组」与「更新日志」章节。
+- **短链 Token 鉴权（v2.5+）** —— `/shorten-v2` 返回 `{code, token}`；覆盖已存在的短码需要携带匹配的 `X-Shortlink-Token` 请求头。
+- **短码加载 UI + `/resolve` 读取鉴权（v2.6+）** —— 新增显式的「通过短码加载」按钮，取代原先粘贴自动解析的流程；`/resolve` 对新格式条目启用鉴权。
+- **Surge `#!MANAGED-CONFIG` 短链保留（v2.7+）** —— 通过短链获取的 Surge 配置会在 `MANAGED-CONFIG` 指令中保留短链 URL，短码重新映射可自动生效，无需在客户端重新配置。
+- **规则组扩展（v2.9+）** —— 新增 15 个内置扩展规则组；可订阅的「自定义规则集」支持 MetaCubeX / blackmatrix7 / Loyalsoldier / ACL4SSR / 自定义 URL 五种源，每条自动生成独立策略组；自定义规则的「出站」改为下拉选择有效目标；新增「漏网之鱼出站」设置；分享链接新增 `customRuleSets` 和 `fallback_outbound` 参数。
+- **自定义规则 IP CIDR 的 `no-resolve` 开关（v2.9.2+）** —— 上游对所有自定义 `IP-CIDR` 规则硬编码 `no-resolve`，导致客户端拿到域名（而非 IP）评估规则时，IP 规则永远不会命中（Surge 系统代理 / HTTPS CONNECT 场景下流量会直接漏到 Final）。本 Fork 在每条自定义规则的 IP CIDR 字段旁加了一个开关，开启后去除 `no-resolve` 标志，让客户端主动解析 DNS 以比对 IP 规则。默认关闭以保持与上游一致。仅影响 Clash / mihomo / Surge 输出，sing-box 无此概念。
 
-README 下方的版本对应章节包含每项变更的迁移说明。
+每项改动的详细说明与迁移指南参见下方「更新日志」章节。
 
 ## ⚠️ 数据留存须知
 
@@ -137,6 +138,10 @@ Sing-Box · Clash · Xray/V2Ray · Surge
 
 ## 🗒️ 更新日志
 
+### v2.9.2
+
+- **自定义规则 IP CIDR 的 `no-resolve` 开关。** 上游对所有用户自定义的 `IP-CIDR` 规则都硬编码了 `no-resolve`，导致客户端在拿到域名（而非 IP）去评估规则时，IP 规则永远不会被命中 —— 流量会静默漏到 Final（Surge 的系统代理 / HTTPS CONNECT 场景尤其常见）。本 Fork 在每条自定义规则的 IP CIDR 字段旁加了一个开关，开启后去除该条规则的 `no-resolve` 标志，客户端会主动解析 DNS 以比对此 IP 规则，从而真正命中。默认关闭，保持与上游一致。仅影响 Clash / mihomo / Surge 输出；sing-box 本身无 `no-resolve` 概念，不受影响。
+
 ### v2.9.1
 
 - **修复**：名字叫 `DIRECT` / `REJECT` / `PASS` 等保留词的自定义规则或自定义规则集不再错误地生成同名策略组。Surge 之前会直接报"策略组不可以使用内部策略名"；其他客户端则会静默把内置动作替换成自建选择器。
@@ -149,6 +154,38 @@ Sing-Box · Clash · Xray/V2Ray · Surge
 - **自定义规则的「出站」**从自由文本改为下拉（内置出站 + 已选规则组 + 上方自定义规则集）。
 - **漏网之鱼出站**可配置（节点选择 / DIRECT / REJECT）。
 - 统一的 `<select>` chevron 箭头与内边距、添加/删除行动画、引用对象删除后自动回退默认出站。
+
+### v2.7
+
+**Surge `#!MANAGED-CONFIG` 短链保留。** 此前 Surge 响应会在 `#!MANAGED-CONFIG` 指令中嵌入长转换 URL（如 `/surge?config=...`）。
+
+- 当 Surge 客户端通过短链（`/s/:code`）订阅时，返回配置中的 `#!MANAGED-CONFIG` 行会改为指向**短链 URL**（如 `https://<host>/s/abc123`）。客户端将保持绑定在短链上；之后对同一短码的 `/shorten-v2` 覆盖操作会在客户端下次刷新时自动生效，无需手动重新配置。
+- 直接访问 `/surge?config=...`（不涉及短链）的行为保持不变 —— 长请求 URL 会被写入 `MANAGED-CONFIG`。
+- `/surge` 新增可选 query 参数 `sub_url`。该值必须为**同源**绝对 URL；跨域或格式错误的值将被静默忽略（从 fallback URL 中剥除），以防止恶意 URL 注入。
+
+**对已有订阅者的一次性迁移：** 此前已绑定长 URL 的 Surge 客户端（来自早期版本）不会自动迁移。请在 Surge 中重新输入短链一次，以启用新行为。
+
+### v2.6
+
+**短码加载 UI + `/resolve` 读取鉴权。** 在 v2.5 的 Token 机制之上。
+
+- **新增 UI 入口**：主输入区的 Paste/Clear 左侧新增「Load from Code」按钮。它会打开一个弹窗，接收短码与可选 Token，将原始订阅配置加载回表单，并记录 Token，使后续「Shorten」调用可以覆盖同一短码。
+- **`/resolve` 启用条件鉴权**：v2.5+ 创建的条目需要匹配的 `X-Shortlink-Token` 请求头。缺失 Token → 401（reason 为 `missing`），Token 错误 → 403（reason 为 `mismatch`）。历史条目（v2.5 之前）仍可匿名读取。
+- **移除粘贴短链自动解析。** 在主输入文本框中粘贴短链（如 `https://<host>/b/<code>`）不再自动拉取并填充表单。请使用新增的「Load from Code」按钮。
+- **`/b/:code`、`/c/:code`、`/x/:code`、`/s/:code` 跳转端点保持不变** —— 仍支持匿名解析，以保证公网上已有的短链继续可用。
+
+迁移说明：任何对新格式短码调用 `/resolve` 的外部工具，现在都必须提供 `X-Shortlink-Token`。
+
+### v2.5
+
+**短链 Token 鉴权**，作用于 `/shorten-v2` 接口。
+
+- **响应改为 JSON**（此前为 `text/plain`）。结构：`{ "code": "<shortcode>", "token": "<32-hex-token>" }`。
+- **覆盖已存在的短码需要**发送 `X-Shortlink-Token: <token>` 请求头。Token 仅在创建时返回一次 —— 请妥善保存。
+- **历史短链**（本版本之前创建的）无 Token。首位引用这类短码的调用方将认领该短链并获取新 Token；之后的覆盖操作需使用该 Token。
+- **鉴权失败返回 403**（JSON `{ error, reason }`，`reason` 为 `missing` 或 `mismatch`）。
+
+迁移说明：以文本方式读取 `/shorten-v2` 响应的外部脚本需改为解析 JSON，并处理新增的 `token` 字段。
 
 ## 🤝 贡献
 
@@ -182,38 +219,6 @@ Sing-Box · Clash · Xray/V2Ray · Surge
 </table>
   <p>若希望赞助本项目，请联系开发者 <a href="https://github.com/7Sageer" style="text-decoration: none;">@7Sageer</a></p>
 </div>
-
-## 🔐 短链 Token 鉴权（v2.5+）
-
-自 v2.5 起，`/shorten-v2` 接口：
-
-- **响应改为 JSON**（此前为 `text/plain`）。结构：`{ "code": "<shortcode>", "token": "<32-hex-token>" }`。
-- **覆盖已存在的短码需要**发送 `X-Shortlink-Token: <token>` 请求头。Token 仅在创建时返回一次 —— 请妥善保存。
-- **历史短链**（本版本之前创建的）无 Token。首位引用这类短码的调用方将认领该短链并获取新 Token；之后的覆盖操作需使用该 Token。
-- **鉴权失败返回 403**（JSON `{ error, reason }`，`reason` 为 `missing` 或 `mismatch`）。
-
-迁移说明：以文本方式读取 `/shorten-v2` 响应的外部脚本需改为解析 JSON，并处理新增的 `token` 字段。
-
-## 🔐 短码加载 + 读取鉴权（v2.6+）
-
-在 v2.5 的 Token 机制之上：
-
-- **新增 UI 入口**：主输入区的 Paste/Clear 左侧新增「Load from Code」按钮。它会打开一个弹窗，接收短码与可选 Token，将原始订阅配置加载回表单，并记录 Token，使后续「Shorten」调用可以覆盖同一短码。
-- **`/resolve` 启用条件鉴权**：v2.5+ 创建的条目需要匹配的 `X-Shortlink-Token` 请求头。缺失 Token → 401（reason 为 `missing`），Token 错误 → 403（reason 为 `mismatch`）。历史条目（v2.5 之前）仍可匿名读取。
-- **移除粘贴短链自动解析**。在主输入文本框中粘贴短链（如 `https://<host>/b/<code>`）不再自动拉取并填充表单。请使用新增的「Load from Code」按钮。
-- **`/b/:code`、`/c/:code`、`/x/:code`、`/s/:code` 跳转端点保持不变** —— 仍支持匿名解析，以保证公网上已有的短链继续可用。
-
-迁移说明：任何对新格式短码调用 `/resolve` 的外部工具，现在都必须提供 `X-Shortlink-Token`。
-
-## 🔐 Surge `#!MANAGED-CONFIG` 短链保留（v2.7+）
-
-此前 Surge 响应会在 `#!MANAGED-CONFIG` 指令中嵌入长转换 URL（如 `/surge?config=...`）。自 v2.7 起：
-
-- 当 Surge 客户端通过短链（`/s/:code`）订阅时，返回配置中的 `#!MANAGED-CONFIG` 行会改为指向**短链 URL**（如 `https://<host>/s/abc123`）。客户端将保持绑定在短链上；之后对同一短码的 `/shorten-v2` 覆盖操作会在客户端下次刷新时自动生效，无需手动重新配置。
-- 直接访问 `/surge?config=...`（不涉及短链）的行为保持不变 —— 长请求 URL 会被写入 `MANAGED-CONFIG`。
-- `/surge` 新增可选 query 参数 `sub_url`。该值必须为**同源**绝对 URL；跨域或格式错误的值将被静默忽略（从 fallback URL 中剥除），以防止恶意 URL 注入。
-
-**对已有订阅者的一次性迁移：** 此前已绑定长 URL 的 Surge 客户端（来自早期版本）不会自动迁移。请在 Surge 中重新输入短链一次，以启用新行为。
 
 ## ⭐ Star 历史
 

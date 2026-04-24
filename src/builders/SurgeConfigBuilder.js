@@ -526,8 +526,9 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
         });
 
         rules.filter(rule => !!rule.ip_cidr).map(rule => {
+            const suffix = rule.resolve_ip ? '' : ',no-resolve';
             rule.ip_cidr.forEach(cidr => {
-                finalConfig.push(`IP-CIDR,${cidr},${this.t('outboundNames.' + rule.outbound)},no-resolve`);
+                finalConfig.push(`IP-CIDR,${cidr},${this.t('outboundNames.' + rule.outbound)}${suffix}`);
             });
         });
 
