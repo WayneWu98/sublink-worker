@@ -475,6 +475,21 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
             });
         });
 
+        // customRuleSets first — higher priority than built-in rules.
+        (this.customRuleSets || []).forEach(item => {
+            if (!item || !item.type) return;
+            const name = (item.name && item.name.trim()) || (item.file && item.file.trim());
+            if (!name) return;
+            const url = resolveCustomRuleSetUrl(item, 'surge');
+            if (!url) return;
+            const outboundLabel = this.t('outboundNames.' + (item.outbound || 'Node Select'));
+            if (item.type === 'site') {
+                finalConfig.push(`RULE-SET,${url},${outboundLabel}`);
+            } else {
+                finalConfig.push(`RULE-SET,${url},${outboundLabel},no-resolve`);
+            }
+        });
+
         rules.filter(rule => !rule._customRuleSet && rule.site_rules && rule.site_rules[0] !== '').map(rule => {
             rule.site_rules.forEach(site => {
                 finalConfig.push(`RULE-SET,${SURGE_SITE_RULE_SET_BASEURL}${site}.conf,${this.t('outboundNames.' + rule.outbound)}`);
@@ -485,19 +500,6 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
             rule.ip_rules.forEach(ip => {
                 finalConfig.push(`RULE-SET,${SURGE_IP_RULE_SET_BASEURL}${ip}.txt,${this.t('outboundNames.' + rule.outbound)},no-resolve`);
             });
-        });
-
-        // customRuleSets: emit with resolved URL (skip when format-gated)
-        (this.customRuleSets || []).forEach(item => {
-            if (!item || !item.name || !item.type) return;
-            const url = resolveCustomRuleSetUrl(item, 'surge');
-            if (!url) return;
-            const outboundLabel = this.t('outboundNames.' + (item.outbound || 'Proxy'));
-            if (item.type === 'site') {
-                finalConfig.push(`RULE-SET,${url},${outboundLabel}`);
-            } else {
-                finalConfig.push(`RULE-SET,${url},${outboundLabel},no-resolve`);
-            }
         });
 
         rules.filter(rule => !!rule.ip_cidr).map(rule => {

@@ -85,16 +85,18 @@ export function generateRules(selectedRules = [], customRules = [], customRuleSe
 		});
 	});
 
-	// customRuleSets: each item becomes a separate rule whose site/ip rule name
-	// equals the user-chosen group name. Builders read _customRuleSet to emit
-	// the rule-set URL via resolveCustomRuleSetUrl.
-	(customRuleSets || []).forEach((item) => {
-		if (!item || !item.name || !item.type) return;
-		rules.push({
-			site_rules: item.type === 'site' ? [item.name] : [],
-			ip_rules:   item.type === 'ip'   ? [item.name] : [],
-			outbound: item.outbound || 'Proxy',
-			_customRuleSet: item
+	// customRuleSets: highest priority — unshifted to the front so they beat
+	// built-in rules (otherwise e.g. geolocation-!cn would swallow reddit first).
+	// Reverse first so the user-declared order is preserved after unshift.
+	[...(customRuleSets || [])].reverse().forEach((item) => {
+		if (!item || !item.type) return;
+		const name = (item.name && item.name.trim()) || (item.file && item.file.trim());
+		if (!name) return;
+		rules.unshift({
+			site_rules: item.type === 'site' ? [name] : [],
+			ip_rules:   item.type === 'ip'   ? [name] : [],
+			outbound: item.outbound || 'Node Select',
+			_customRuleSet: { ...item, name }
 		});
 	});
 
@@ -170,13 +172,15 @@ export function generateRuleSets(selectedRules = [], customRules = [], customRul
 
 	// customRuleSets: resolve each URL per sing-box and push onto the right set
 	(customRuleSets || []).forEach((item) => {
-		if (!item || !item.name || !item.type) return;
+		if (!item || !item.type) return;
+		const name = (item.name && item.name.trim()) || (item.file && item.file.trim());
+		if (!name) return;
 		const url = resolveCustomRuleSetUrl(item, 'singbox');
 		if (!url) return;
 		if (item.type === 'site') {
-			site_rule_sets.push({ tag: item.name, type: 'remote', format: 'binary', url });
+			site_rule_sets.push({ tag: name, type: 'remote', format: 'binary', url });
 		} else {
-			ip_rule_sets.push({ tag: `${item.name}-ip`, type: 'remote', format: 'binary', url });
+			ip_rule_sets.push({ tag: `${name}-ip`, type: 'remote', format: 'binary', url });
 		}
 	});
 
@@ -277,7 +281,9 @@ export function generateClashRuleSets(selectedRules = [], customRules = [], useM
 	// customRuleSets: resolve each URL under clash. Pick format by URL suffix
 	// so mixed providers (metacubex .mrs + loyalsoldier .yaml + custom) coexist.
 	(customRuleSets || []).forEach((item) => {
-		if (!item || !item.name || !item.type) return;
+		if (!item || !item.type) return;
+		const name = (item.name && item.name.trim()) || (item.file && item.file.trim());
+		if (!name) return;
 		const url = resolveCustomRuleSetUrl(item, 'clash');
 		if (!url) return;
 		const lowerUrl = url.toLowerCase();
@@ -290,14 +296,14 @@ export function generateClashRuleSets(selectedRules = [], customRules = [], useM
 		              : lowerUrl.endsWith('.list') ? '.list'
 		              : (useMrs ? '.mrs' : '.yaml');
 		if (item.type === 'site') {
-			site_rule_providers[item.name] = {
+			site_rule_providers[name] = {
 				type: 'http', format: itemFormat, behavior: 'domain', url,
-				path: `./ruleset/${item.name}${itemExt}`, interval: 86400
+				path: `./ruleset/${name}${itemExt}`, interval: 86400
 			};
 		} else {
-			ip_rule_providers[`${item.name}-ip`] = {
+			ip_rule_providers[`${name}-ip`] = {
 				type: 'http', format: itemFormat, behavior: 'ipcidr', url,
-				path: `./ruleset/${item.name}-ip${itemExt}`, interval: 86400
+				path: `./ruleset/${name}-ip${itemExt}`, interval: 86400
 			};
 		}
 	});
