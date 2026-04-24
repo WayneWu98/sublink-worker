@@ -129,12 +129,12 @@ export const CustomRuleSets = (props) => {
                                             <option value="DIRECT">DIRECT</option>
                                             <option value="REJECT">REJECT</option>
                                         </optgroup>
-                                        <optgroup x-bind:label="'{t('outboundSelectedRules')}'" x-show="($root.selectedRules || []).length > 0">
+                                        <optgroup label={t('outboundSelectedRules')} x-show="($root.selectedRules || []).length > 0">
                                             <template x-for="key in ($root.selectedRules || [])" x-bind:key="key">
                                                 <option x-bind:value="key" x-text="OUTBOUND_LABELS[key] || key"></option>
                                             </template>
                                         </optgroup>
-                                        <optgroup x-bind:label="'{t('outboundPriorRulesets')}'" x-show="priorRulesetNames(index).length > 0">
+                                        <optgroup label={t('outboundPriorRulesets')} x-show="priorRulesetNames(index).length > 0">
                                             <template x-for="n in priorRulesetNames(index)" x-bind:key="n">
                                                 <option x-bind:value="n" x-text="n"></option>
                                             </template>
