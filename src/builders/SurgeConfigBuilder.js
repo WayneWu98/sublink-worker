@@ -1,18 +1,27 @@
 import { BaseConfigBuilder } from './BaseConfigBuilder.js';
 import { groupProxiesByCountry } from '../utils.js';
 import { SURGE_CONFIG, SURGE_SITE_RULE_SET_BASEURL, SURGE_IP_RULE_SET_BASEURL, generateRules, getOutbounds, PREDEFINED_RULE_SETS, DIRECT_DEFAULT_RULES } from '../config/index.js';
+import { resolveCustomRuleSetUrl } from '../config/ruleGenerators.js';
 import { addProxyWithDedup } from './helpers/proxyHelpers.js';
 import { buildSelectorMembers, buildNodeSelectMembers, uniqueNames } from './helpers/groupBuilder.js';
 
 export class SurgeConfigBuilder extends BaseConfigBuilder {
-    constructor(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry, includeAutoSelect = true) {
+    constructor(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry, includeAutoSelect = true, customRuleSets = [], fallbackOutbound = 'Node Select') {
         const resolvedBaseConfig = baseConfig ?? SURGE_CONFIG;
         super(inputString, resolvedBaseConfig, lang, userAgent, groupByCountry, includeAutoSelect);
         this.selectedRules = selectedRules;
         this.customRules = customRules;
+        this.customRuleSets = customRuleSets || [];
+        this.fallbackOutbound = fallbackOutbound || 'Node Select';
         this.subscriptionUrl = null;
         this.countryGroupNames = [];
         this.manualGroupName = null;
+    }
+
+    resolveFallbackDefault() {
+        const raw = this.fallbackOutbound || 'Node Select';
+        if (raw === 'DIRECT' || raw === 'REJECT') return raw;
+        return this.t('outboundNames.' + raw);
     }
 
     setSubscriptionUrl(url) {
@@ -314,9 +323,34 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
         }
     }
 
+    addCustomRuleSetGroups(proxyList) {
+        (this.customRuleSets || []).forEach((item) => {
+            if (!item || !item.type) return;
+            const name = (item.name && item.name.trim()) || (item.file && item.file.trim());
+            if (!name) return;
+            if (this.hasProxyGroup(name)) return;
+            let options = this.buildAggregatedOptions(proxyList);
+            const def = this.resolveCustomRuleSetDefault(item);
+            if (def && options.includes(def)) {
+                options = [def, ...options.filter(o => o !== def)];
+            }
+            this.config['proxy-groups'].push(this.createProxyGroup(name, 'select', options));
+        });
+    }
+
+    resolveCustomRuleSetDefault(item) {
+        const raw = item?.outbound || 'Node Select';
+        if (raw === 'DIRECT' || raw === 'REJECT') return raw;
+        return this.t('outboundNames.' + raw);
+    }
+
     addFallBackGroup(proxyList) {
-        const options = this.buildAggregatedOptions(proxyList);
+        let options = this.buildAggregatedOptions(proxyList);
         if (this.hasProxyGroup(this.t('outboundNames.Fall Back'))) return;
+        const def = this.resolveFallbackDefault();
+        if (def && options.includes(def)) {
+            options = [def, ...options.filter(o => o !== def)];
+        }
         this.config['proxy-groups'].push(
             this.createProxyGroup(this.t('outboundNames.Fall Back'), 'select', options)
         );
@@ -377,7 +411,7 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
     }
 
     formatConfig() {
-        const rules = generateRules(this.selectedRules, this.customRules);
+        const rules = generateRules(this.selectedRules, this.customRules, this.customRuleSets);
         let finalConfig = [];
 
         if (this.subscriptionUrl) {
@@ -462,13 +496,28 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
             });
         });
 
-        rules.filter(rule => rule.site_rules[0] !== '').map(rule => {
+        // customRuleSets first — higher priority than built-in rules.
+        // Route to the new proxy group named `name` (added by addCustomRuleSetGroups).
+        (this.customRuleSets || []).forEach(item => {
+            if (!item || !item.type) return;
+            const name = (item.name && item.name.trim()) || (item.file && item.file.trim());
+            if (!name) return;
+            const url = resolveCustomRuleSetUrl(item, 'surge');
+            if (!url) return;
+            if (item.type === 'site') {
+                finalConfig.push(`RULE-SET,${url},${name}`);
+            } else {
+                finalConfig.push(`RULE-SET,${url},${name},no-resolve`);
+            }
+        });
+
+        rules.filter(rule => !rule._customRuleSet && rule.site_rules && rule.site_rules[0] !== '').map(rule => {
             rule.site_rules.forEach(site => {
                 finalConfig.push(`RULE-SET,${SURGE_SITE_RULE_SET_BASEURL}${site}.conf,${this.t('outboundNames.' + rule.outbound)}`);
             });
         });
 
-        rules.filter(rule => rule.ip_rules[0] !== '').map(rule => {
+        rules.filter(rule => !rule._customRuleSet && rule.ip_rules && rule.ip_rules[0] !== '').map(rule => {
             rule.ip_rules.forEach(ip => {
                 finalConfig.push(`RULE-SET,${SURGE_IP_RULE_SET_BASEURL}${ip}.txt,${this.t('outboundNames.' + rule.outbound)},no-resolve`);
             });

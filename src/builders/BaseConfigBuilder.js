@@ -311,6 +311,11 @@ export class BaseConfigBuilder {
         throw new Error('addCustomRuleGroups must be implemented in child class');
     }
 
+    addCustomRuleSetGroups(proxyList) {
+        // Default no-op; child classes override to register a selector
+        // per customRuleSets entry so traffic can be routed to it.
+    }
+
     addFallBackGroup(proxyList) {
         throw new Error('addFallBackGroup must be implemented in child class');
     }
@@ -342,6 +347,7 @@ export class BaseConfigBuilder {
         }
         this.addOutboundGroups(outbounds, proxyList);
         this.addCustomRuleGroups(proxyList);
+        this.addCustomRuleSetGroups(proxyList);
         this.addFallBackGroup(proxyList);
 
         // Merge user-defined proxy-groups after system groups are created

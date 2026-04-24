@@ -77,6 +77,8 @@ export function createApp(bindings = {}) {
 
             const selectedRules = parseSelectedRules(c.req.query('selectedRules'));
             const customRules = parseJsonArray(c.req.query('customRules'));
+            const customRuleSets = parseJsonArray(c.req.query('customRuleSets'));
+            const fallbackOutbound = parseFallbackOutbound(c.req.query('fallback_outbound'));
             const ua = c.req.query('ua') || getRequestHeader(c.req, 'User-Agent') || DEFAULT_USER_AGENT;
             const groupByCountry = parseBooleanFlag(c.req.query('group_by_country'));
             const includeAutoSelect = c.req.query('include_auto_select') !== 'false';
@@ -111,7 +113,9 @@ export function createApp(bindings = {}) {
                 externalController,
                 externalUiDownloadUrl,
                 singboxConfigVersion,
-                includeAutoSelect
+                includeAutoSelect,
+                customRuleSets,
+                fallbackOutbound
             );
             await builder.build();
             const userinfo = builder.getSubscriptionUserinfo();
@@ -133,6 +137,8 @@ export function createApp(bindings = {}) {
 
             const selectedRules = parseSelectedRules(c.req.query('selectedRules'));
             const customRules = parseJsonArray(c.req.query('customRules'));
+            const customRuleSets = parseJsonArray(c.req.query('customRuleSets'));
+            const fallbackOutbound = parseFallbackOutbound(c.req.query('fallback_outbound'));
             const ua = c.req.query('ua') || getRequestHeader(c.req, 'User-Agent') || DEFAULT_USER_AGENT;
             const groupByCountry = parseBooleanFlag(c.req.query('group_by_country'));
             const includeAutoSelect = c.req.query('include_auto_select') !== 'false';
@@ -159,7 +165,9 @@ export function createApp(bindings = {}) {
                 enableClashUI,
                 externalController,
                 externalUiDownloadUrl,
-                includeAutoSelect
+                includeAutoSelect,
+                customRuleSets,
+                fallbackOutbound
             );
             await builder.build();
             const userinfo = builder.getSubscriptionUserinfo();
@@ -182,6 +190,8 @@ export function createApp(bindings = {}) {
 
             const selectedRules = parseSelectedRules(c.req.query('selectedRules'));
             const customRules = parseJsonArray(c.req.query('customRules'));
+            const customRuleSets = parseJsonArray(c.req.query('customRuleSets'));
+            const fallbackOutbound = parseFallbackOutbound(c.req.query('fallback_outbound'));
             const ua = c.req.query('ua') || getRequestHeader(c.req, 'User-Agent') || DEFAULT_USER_AGENT;
             const groupByCountry = parseBooleanFlag(c.req.query('group_by_country'));
             const includeAutoSelect = c.req.query('include_auto_select') !== 'false';
@@ -202,7 +212,9 @@ export function createApp(bindings = {}) {
                 lang,
                 ua,
                 groupByCountry,
-                includeAutoSelect
+                includeAutoSelect,
+                customRuleSets,
+                fallbackOutbound
             );
             builder.setSubscriptionUrl(resolveSurgeSubscriptionUrl(c.req));
             await builder.build();
@@ -454,6 +466,11 @@ function parseJsonArray(raw) {
 
 function parseBooleanFlag(value) {
     return value === 'true' || value === true;
+}
+
+const VALID_FALLBACK_OUTBOUNDS = new Set(['Node Select', 'DIRECT', 'REJECT']);
+function parseFallbackOutbound(raw) {
+    return VALID_FALLBACK_OUTBOUNDS.has(raw) ? raw : 'Node Select';
 }
 
 function parseSemverLike(value) {

@@ -111,6 +111,24 @@ export const Layout = (props) => {
           }
 
           [x-cloak] { display: none !important; }
+
+          /* Custom dropdown arrow — replace the native OS chevron with a clean SVG.
+             padding-right uses !important so it wins over Tailwind's px-* utilities
+             that otherwise cap the right padding and let the SVG overlap option text. */
+          select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 1rem 1rem;
+            padding-right: 2.5rem !important;
+          }
+          .dark select,
+          html.dark select {
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239ca3af' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+          }
         </style>
         <script>
           function appData() {

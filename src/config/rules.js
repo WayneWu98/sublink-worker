@@ -95,7 +95,23 @@ export const UNIFIED_RULES = [
 		name: 'Non-China',
 		site_rules: ['geolocation-!cn'],
 		ip_rules: []
-	}
+	},
+	// --- Extended groups (collapsed in UI by default) ---
+	{ name: 'Discord',   site_rules: ['discord'],           ip_rules: [], extended: true },
+	{ name: 'WhatsApp',  site_rules: ['whatsapp'],          ip_rules: [], extended: true },
+	{ name: 'Signal',    site_rules: ['signal'],            ip_rules: [], extended: true },
+	{ name: 'Line',      site_rules: ['line'],              ip_rules: [], extended: true },
+	{ name: 'Zoom',      site_rules: ['zoom'],              ip_rules: [], extended: true },
+	{ name: 'Spotify',   site_rules: ['spotify'],           ip_rules: [], extended: true },
+	{ name: 'News',      site_rules: ['category-news-!cn'], ip_rules: [], extended: true },
+	{ name: 'Reddit',    site_rules: ['reddit'],            ip_rules: [], extended: true },
+	{ name: 'Twitch',    site_rules: ['twitch'],            ip_rules: [], extended: true },
+	{ name: 'Pixiv',     site_rules: ['pixiv'],             ip_rules: [], extended: true },
+	{ name: 'Developer', site_rules: ['category-dev-!cn'],  ip_rules: [], extended: true },
+	{ name: 'OpenAI',    site_rules: ['openai'],            ip_rules: [], extended: true },
+	{ name: 'Anthropic', site_rules: ['anthropic'],         ip_rules: [], extended: true },
+	{ name: 'Speedtest', site_rules: ['speedtest'],         ip_rules: [], extended: true },
+	{ name: 'Porn',      site_rules: ['category-porn'],     ip_rules: [], extended: true }
 ];
 
 // Rule names that should default to DIRECT instead of Node Select
@@ -104,7 +120,7 @@ export const DIRECT_DEFAULT_RULES = new Set(['Private', 'Location:CN']);
 export const PREDEFINED_RULE_SETS = {
 	minimal: ['Location:CN', 'Private', 'Non-China'],
 	balanced: ['Location:CN', 'Private', 'Non-China', 'Github', 'Google', 'Youtube', 'AI Services', 'Telegram'],
-	comprehensive: UNIFIED_RULES.map(rule => rule.name)
+	comprehensive: UNIFIED_RULES.filter(rule => !rule.extended).map(rule => rule.name)
 };
 
 // Generate SITE_RULE_SETS and IP_RULE_SETS from UNIFIED_RULES

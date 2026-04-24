@@ -47,18 +47,26 @@ function getClashUdpValue(proxy, defaultEnabled = true) {
 }
 
 export class ClashConfigBuilder extends BaseConfigBuilder {
-    constructor(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry = false, enableClashUI = false, externalController, externalUiDownloadUrl, includeAutoSelect = true) {
+    constructor(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry = false, enableClashUI = false, externalController, externalUiDownloadUrl, includeAutoSelect = true, customRuleSets = [], fallbackOutbound = 'Node Select') {
         if (!baseConfig) {
             baseConfig = CLASH_CONFIG;
         }
         super(inputString, baseConfig, lang, userAgent, groupByCountry, includeAutoSelect);
         this.selectedRules = selectedRules;
         this.customRules = customRules;
+        this.customRuleSets = customRuleSets || [];
+        this.fallbackOutbound = fallbackOutbound || 'Node Select';
         this.countryGroupNames = [];
         this.manualGroupName = null;
         this.enableClashUI = enableClashUI;
         this.externalController = externalController;
         this.externalUiDownloadUrl = externalUiDownloadUrl;
+    }
+
+    resolveFallbackDefault() {
+        const raw = this.fallbackOutbound || 'Node Select';
+        if (raw === 'DIRECT' || raw === 'REJECT') return raw;
+        return this.t('outboundNames.' + raw);
     }
 
     /**
@@ -439,10 +447,35 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
         }
     }
 
+    addCustomRuleSetGroups(proxyList) {
+        (this.customRuleSets || []).forEach((item) => {
+            if (!item || !item.type) return;
+            const name = (item.name && item.name.trim()) || (item.file && item.file.trim());
+            if (!name) return;
+            if (this.hasProxyGroup(name)) return;
+            let proxies = this.buildSelectGroupMembers(proxyList);
+            const def = this.resolveCustomRuleSetDefault(item);
+            if (def && proxies.includes(def)) {
+                proxies = [def, ...proxies.filter(p => p !== def)];
+            }
+            this.config['proxy-groups'].push({ type: 'select', name, proxies });
+        });
+    }
+
+    resolveCustomRuleSetDefault(item) {
+        const raw = item?.outbound || 'Node Select';
+        if (raw === 'DIRECT' || raw === 'REJECT') return raw;
+        return this.t('outboundNames.' + raw);
+    }
+
     addFallBackGroup(proxyList) {
         const name = this.t('outboundNames.Fall Back');
         if (this.hasProxyGroup(name)) return;
-        const proxies = this.buildSelectGroupMembers(proxyList);
+        let proxies = this.buildSelectGroupMembers(proxyList);
+        const def = this.resolveFallbackDefault();
+        if (def && proxies.includes(def)) {
+            proxies = [def, ...proxies.filter(p => p !== def)];
+        }
         const group = {
             type: "select",
             name,
@@ -632,13 +665,13 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
 
     // 生成规则
     generateRules() {
-        return generateRules(this.selectedRules, this.customRules);
+        return generateRules(this.selectedRules, this.customRules, this.customRuleSets);
     }
 
     formatConfig() {
         const rules = this.generateRules();
         const useMrs = supportsMrsFormat(this.userAgent);
-        const { site_rule_providers, ip_rule_providers } = generateClashRuleSets(this.selectedRules, this.customRules, useMrs);
+        const { site_rule_providers, ip_rule_providers } = generateClashRuleSets(this.selectedRules, this.customRules, useMrs, this.customRuleSets);
         this.config['rule-providers'] = {
             ...site_rule_providers,
             ...ip_rule_providers

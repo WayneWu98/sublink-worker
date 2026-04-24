@@ -5,6 +5,24 @@
 
 import { UNIFIED_RULES, PREDEFINED_RULE_SETS, SITE_RULE_SETS, IP_RULE_SETS, CLASH_SITE_RULE_SETS, CLASH_IP_RULE_SETS } from './rules.js';
 import { SITE_RULE_SET_BASE_URL, IP_RULE_SET_BASE_URL, CLASH_SITE_RULE_SET_BASE_URL, CLASH_IP_RULE_SET_BASE_URL } from './ruleUrls.js';
+import { resolveProviderUrl } from './ruleSetProviders.js';
+
+/**
+ * Resolve the rule-set file URL for a customRuleSets entry under a given format.
+ * Returns null when the provider lacks the requested format (format-gated) or
+ * when provider === 'custom' and no URL was supplied for that format.
+ *
+ *   format: 'singbox' | 'clash' | 'surge'
+ */
+export function resolveCustomRuleSetUrl(item, format) {
+	if (!item || !item.type) return null;
+	if (item.provider === 'custom') {
+		const url = item.urls?.[format];
+		return (typeof url === 'string' && url.length > 0) ? url : null;
+	}
+	if (!item.file) return null;
+	return resolveProviderUrl(item.provider, item.type, format, item.file);
+}
 
 function toStringArray(value) {
 	if (Array.isArray(value)) {
@@ -29,7 +47,7 @@ export function getOutbounds(selectedRuleNames) {
 }
 
 // Helper function to generate rules based on selected rule names
-export function generateRules(selectedRules = [], customRules = []) {
+export function generateRules(selectedRules = [], customRules = [], customRuleSets = []) {
 	if (typeof selectedRules === 'string' && PREDEFINED_RULE_SETS[selectedRules]) {
 		selectedRules = PREDEFINED_RULE_SETS[selectedRules];
 	}
@@ -67,10 +85,26 @@ export function generateRules(selectedRules = [], customRules = []) {
 		});
 	});
 
+	// customRuleSets: highest priority — unshifted to the front so they beat
+	// built-in rules. Traffic routes to a NEW selector group named after the
+	// user's name (builders create it in addCustomRuleSetGroups). The form's
+	// outbound field becomes that group's default member.
+	[...(customRuleSets || [])].reverse().forEach((item) => {
+		if (!item || !item.type) return;
+		const name = (item.name && item.name.trim()) || (item.file && item.file.trim());
+		if (!name) return;
+		rules.unshift({
+			site_rules: item.type === 'site' ? [name] : [],
+			ip_rules:   item.type === 'ip'   ? [name] : [],
+			outbound: name,
+			_customRuleSet: { ...item, name }
+		});
+	});
+
 	return rules;
 }
 
-export function generateRuleSets(selectedRules = [], customRules = []) {
+export function generateRuleSets(selectedRules = [], customRules = [], customRuleSets = []) {
 	if (typeof selectedRules === 'string' && PREDEFINED_RULE_SETS[selectedRules]) {
 		selectedRules = PREDEFINED_RULE_SETS[selectedRules];
 	}
@@ -137,13 +171,27 @@ export function generateRuleSets(selectedRules = [], customRules = []) {
 		});
 	}
 
+	// customRuleSets: resolve each URL per sing-box and push onto the right set
+	(customRuleSets || []).forEach((item) => {
+		if (!item || !item.type) return;
+		const name = (item.name && item.name.trim()) || (item.file && item.file.trim());
+		if (!name) return;
+		const url = resolveCustomRuleSetUrl(item, 'singbox');
+		if (!url) return;
+		if (item.type === 'site') {
+			site_rule_sets.push({ tag: name, type: 'remote', format: 'binary', url });
+		} else {
+			ip_rule_sets.push({ tag: `${name}-ip`, type: 'remote', format: 'binary', url });
+		}
+	});
+
 	ruleSets.push(...site_rule_sets, ...ip_rule_sets);
 
 	return { site_rule_sets, ip_rule_sets };
 }
 
 // Generate rule sets for Clash using .mrs format
-export function generateClashRuleSets(selectedRules = [], customRules = [], useMrs = true) {
+export function generateClashRuleSets(selectedRules = [], customRules = [], useMrs = true, customRuleSets = []) {
 	if (typeof selectedRules === 'string' && PREDEFINED_RULE_SETS[selectedRules]) {
 		selectedRules = PREDEFINED_RULE_SETS[selectedRules];
 	}
@@ -230,6 +278,36 @@ export function generateClashRuleSets(selectedRules = [], customRules = [], useM
 			});
 		});
 	}
+
+	// customRuleSets: resolve each URL under clash. Pick format by URL suffix
+	// so mixed providers (metacubex .mrs + loyalsoldier .yaml + custom) coexist.
+	(customRuleSets || []).forEach((item) => {
+		if (!item || !item.type) return;
+		const name = (item.name && item.name.trim()) || (item.file && item.file.trim());
+		if (!name) return;
+		const url = resolveCustomRuleSetUrl(item, 'clash');
+		if (!url) return;
+		const lowerUrl = url.toLowerCase();
+		const itemFormat = lowerUrl.endsWith('.mrs')  ? 'mrs'
+		                 : lowerUrl.endsWith('.yaml') ? 'yaml'
+		                 : lowerUrl.endsWith('.list') ? 'text'
+		                 : (useMrs ? 'mrs' : 'yaml');
+		const itemExt = lowerUrl.endsWith('.mrs')  ? '.mrs'
+		              : lowerUrl.endsWith('.yaml') ? '.yaml'
+		              : lowerUrl.endsWith('.list') ? '.list'
+		              : (useMrs ? '.mrs' : '.yaml');
+		if (item.type === 'site') {
+			site_rule_providers[name] = {
+				type: 'http', format: itemFormat, behavior: 'domain', url,
+				path: `./ruleset/${name}${itemExt}`, interval: 86400
+			};
+		} else {
+			ip_rule_providers[`${name}-ip`] = {
+				type: 'http', format: itemFormat, behavior: 'ipcidr', url,
+				path: `./ruleset/${name}-ip${itemExt}`, interval: 86400
+			};
+		}
+	});
 
 	return { site_rule_providers, ip_rule_providers };
 }

@@ -7,12 +7,14 @@ import { buildSelectorMembers as buildSelectorMemberList, buildNodeSelectMembers
 import { normalizeGroupName } from './helpers/groupNameUtils.js';
 
 export class SingboxConfigBuilder extends BaseConfigBuilder {
-    constructor(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry = false, enableClashUI = false, externalController, externalUiDownloadUrl, singboxVersion = '1.12', includeAutoSelect = true) {
+    constructor(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry = false, enableClashUI = false, externalController, externalUiDownloadUrl, singboxVersion = '1.12', includeAutoSelect = true, customRuleSets = [], fallbackOutbound = 'Node Select') {
         const resolvedBaseConfig = baseConfig ?? SING_BOX_CONFIG;
         super(inputString, resolvedBaseConfig, lang, userAgent, groupByCountry, includeAutoSelect);
 
         this.selectedRules = selectedRules;
         this.customRules = customRules;
+        this.customRuleSets = customRuleSets || [];
+        this.fallbackOutbound = fallbackOutbound || 'Node Select';
         this.countryGroupNames = [];
         this.manualGroupName = null;
         this.enableClashUI = enableClashUI;
@@ -250,14 +252,49 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
         }
     }
 
+    addCustomRuleSetGroups(proxyList) {
+        (this.customRuleSets || []).forEach((item) => {
+            if (!item || !item.type) return;
+            const name = (item.name && item.name.trim()) || (item.file && item.file.trim());
+            if (!name) return;
+            if (this.hasOutboundTag(name)) return;
+            const members = this.buildSelectorMembers(proxyList);
+            const def = this.resolveCustomRuleSetDefault(item);
+            const entry = {
+                type: 'selector',
+                tag: name,
+                outbounds: members
+            };
+            if (def && members.includes(def)) entry.default = def;
+            this.config.outbounds.push(entry);
+        });
+    }
+
+    resolveCustomRuleSetDefault(item) {
+        const raw = item?.outbound || 'Node Select';
+        if (raw === 'DIRECT' || raw === 'REJECT') return raw;
+        return this.t('outboundNames.' + raw);
+    }
+
     addFallBackGroup(proxyList) {
         const selectorMembers = this.buildSelectorMembers(proxyList);
         if (this.hasOutboundTag(this.t('outboundNames.Fall Back'))) return;
-        this.config.outbounds.push({
+        const entry = {
             type: "selector",
             tag: this.t('outboundNames.Fall Back'),
             outbounds: selectorMembers
-        });
+        };
+        const def = this.resolveFallbackDefault();
+        if (def && selectorMembers.includes(def)) {
+            entry.default = def;
+        }
+        this.config.outbounds.push(entry);
+    }
+
+    resolveFallbackDefault() {
+        const raw = this.fallbackOutbound || 'Node Select';
+        if (raw === 'DIRECT' || raw === 'REJECT') return raw;
+        return this.t('outboundNames.' + raw);
     }
 
     addCountryGroups() {
@@ -448,8 +485,8 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
     }
 
     formatConfig() {
-        const rules = generateRules(this.selectedRules, this.customRules);
-        const { site_rule_sets, ip_rule_sets } = generateRuleSets(this.selectedRules, this.customRules);
+        const rules = generateRules(this.selectedRules, this.customRules, this.customRuleSets);
+        const { site_rule_sets, ip_rule_sets } = generateRuleSets(this.selectedRules, this.customRules, this.customRuleSets);
 
         this.config.route.rule_set = [...site_rule_sets, ...ip_rule_sets];
 

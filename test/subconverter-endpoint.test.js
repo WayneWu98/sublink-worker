@@ -139,7 +139,7 @@ describe('GET /subconverter', () => {
         // Private group should have DIRECT as first option
         expect(text).toMatch(/custom_proxy_group=.*私有网络.*select.*\[]DIRECT/);
         // Location:CN group should have DIRECT as first option
-        expect(text).toMatch(/custom_proxy_group=.*国内服务.*select.*\[]DIRECT/);
+        expect(text).toMatch(/custom_proxy_group=.*国内直连.*select.*\[]DIRECT/);
     });
 
     it('maps other rules to Node Select', async () => {
