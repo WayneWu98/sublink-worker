@@ -45,14 +45,17 @@ describe('Custom RuleSets E2E', () => {
         expect(yaml).toContain('/geosite/spotify.mrs');
     });
 
-    it('surge output contains both customRuleSets RULE-SET lines', async () => {
+    it('surge output contains both customRuleSets RULE-SET lines targeting the new groups', async () => {
         const b = new SurgeConfigBuilder(
             SAMPLE, SELECTION, [], null, 'en', '', false, true,
             CUSTOM_RULESETS
         );
         const text = await b.build();
-        expect(text).toMatch(/RULE-SET,.*spotify\.conf,/);
-        expect(text).toContain('https://example.com/custom.list');
+        expect(text).toMatch(/RULE-SET,.*spotify\.conf,MyMeta/);
+        expect(text).toMatch(/RULE-SET,https:\/\/example\.com\/custom\.list,MyCustom/);
+        // Proxy groups named after the custom rule sets exist too
+        expect(text).toMatch(/^MyMeta = select,/m);
+        expect(text).toMatch(/^MyCustom = select,/m);
     });
 
     it('backward compat: empty customRuleSets produces same output as omitting the arg', async () => {

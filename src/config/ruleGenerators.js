@@ -86,8 +86,9 @@ export function generateRules(selectedRules = [], customRules = [], customRuleSe
 	});
 
 	// customRuleSets: highest priority — unshifted to the front so they beat
-	// built-in rules (otherwise e.g. geolocation-!cn would swallow reddit first).
-	// Reverse first so the user-declared order is preserved after unshift.
+	// built-in rules. Traffic routes to a NEW selector group named after the
+	// user's name (builders create it in addCustomRuleSetGroups). The form's
+	// outbound field becomes that group's default member.
 	[...(customRuleSets || [])].reverse().forEach((item) => {
 		if (!item || !item.type) return;
 		const name = (item.name && item.name.trim()) || (item.file && item.file.trim());
@@ -95,7 +96,7 @@ export function generateRules(selectedRules = [], customRules = [], customRuleSe
 		rules.unshift({
 			site_rules: item.type === 'site' ? [name] : [],
 			ip_rules:   item.type === 'ip'   ? [name] : [],
-			outbound: item.outbound || 'Node Select',
+			outbound: name,
 			_customRuleSet: { ...item, name }
 		});
 	});

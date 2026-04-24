@@ -252,6 +252,30 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
         }
     }
 
+    addCustomRuleSetGroups(proxyList) {
+        (this.customRuleSets || []).forEach((item) => {
+            if (!item || !item.type) return;
+            const name = (item.name && item.name.trim()) || (item.file && item.file.trim());
+            if (!name) return;
+            if (this.hasOutboundTag(name)) return;
+            const members = this.buildSelectorMembers(proxyList);
+            const def = this.resolveCustomRuleSetDefault(item);
+            const entry = {
+                type: 'selector',
+                tag: name,
+                outbounds: members
+            };
+            if (def && members.includes(def)) entry.default = def;
+            this.config.outbounds.push(entry);
+        });
+    }
+
+    resolveCustomRuleSetDefault(item) {
+        const raw = item?.outbound || 'Node Select';
+        if (raw === 'DIRECT' || raw === 'REJECT') return raw;
+        return this.t('outboundNames.' + raw);
+    }
+
     addFallBackGroup(proxyList) {
         const selectorMembers = this.buildSelectorMembers(proxyList);
         if (this.hasOutboundTag(this.t('outboundNames.Fall Back'))) return;

@@ -447,6 +447,27 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
         }
     }
 
+    addCustomRuleSetGroups(proxyList) {
+        (this.customRuleSets || []).forEach((item) => {
+            if (!item || !item.type) return;
+            const name = (item.name && item.name.trim()) || (item.file && item.file.trim());
+            if (!name) return;
+            if (this.hasProxyGroup(name)) return;
+            let proxies = this.buildSelectGroupMembers(proxyList);
+            const def = this.resolveCustomRuleSetDefault(item);
+            if (def && proxies.includes(def)) {
+                proxies = [def, ...proxies.filter(p => p !== def)];
+            }
+            this.config['proxy-groups'].push({ type: 'select', name, proxies });
+        });
+    }
+
+    resolveCustomRuleSetDefault(item) {
+        const raw = item?.outbound || 'Node Select';
+        if (raw === 'DIRECT' || raw === 'REJECT') return raw;
+        return this.t('outboundNames.' + raw);
+    }
+
     addFallBackGroup(proxyList) {
         const name = this.t('outboundNames.Fall Back');
         if (this.hasProxyGroup(name)) return;

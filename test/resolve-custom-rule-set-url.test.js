@@ -53,8 +53,11 @@ describe('generateRules with customRuleSets', () => {
     );
     const custom = rules.filter(r => r._customRuleSet);
     expect(custom.length).toBe(1);
-    expect(custom[0].outbound).toBe('Proxy');
+    // Routing target is the user's name (a new selector group created by builders),
+    // not the outbound field (which becomes the group's default option instead).
+    expect(custom[0].outbound).toBe('MyReddit');
     expect(custom[0].site_rules).toEqual(['MyReddit']);
+    expect(custom[0]._customRuleSet.outbound).toBe('Proxy');
   });
 
   it('uses ip_rules slot when type is ip', () => {

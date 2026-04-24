@@ -323,6 +323,27 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
         }
     }
 
+    addCustomRuleSetGroups(proxyList) {
+        (this.customRuleSets || []).forEach((item) => {
+            if (!item || !item.type) return;
+            const name = (item.name && item.name.trim()) || (item.file && item.file.trim());
+            if (!name) return;
+            if (this.hasProxyGroup(name)) return;
+            let options = this.buildAggregatedOptions(proxyList);
+            const def = this.resolveCustomRuleSetDefault(item);
+            if (def && options.includes(def)) {
+                options = [def, ...options.filter(o => o !== def)];
+            }
+            this.config['proxy-groups'].push(this.createProxyGroup(name, 'select', options));
+        });
+    }
+
+    resolveCustomRuleSetDefault(item) {
+        const raw = item?.outbound || 'Node Select';
+        if (raw === 'DIRECT' || raw === 'REJECT') return raw;
+        return this.t('outboundNames.' + raw);
+    }
+
     addFallBackGroup(proxyList) {
         let options = this.buildAggregatedOptions(proxyList);
         if (this.hasProxyGroup(this.t('outboundNames.Fall Back'))) return;
@@ -476,17 +497,17 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
         });
 
         // customRuleSets first — higher priority than built-in rules.
+        // Route to the new proxy group named `name` (added by addCustomRuleSetGroups).
         (this.customRuleSets || []).forEach(item => {
             if (!item || !item.type) return;
             const name = (item.name && item.name.trim()) || (item.file && item.file.trim());
             if (!name) return;
             const url = resolveCustomRuleSetUrl(item, 'surge');
             if (!url) return;
-            const outboundLabel = this.t('outboundNames.' + (item.outbound || 'Node Select'));
             if (item.type === 'site') {
-                finalConfig.push(`RULE-SET,${url},${outboundLabel}`);
+                finalConfig.push(`RULE-SET,${url},${name}`);
             } else {
-                finalConfig.push(`RULE-SET,${url},${outboundLabel},no-resolve`);
+                finalConfig.push(`RULE-SET,${url},${name},no-resolve`);
             }
         });
 
