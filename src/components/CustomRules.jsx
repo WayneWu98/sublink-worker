@@ -105,8 +105,8 @@ export const CustomRules = (props) => {
                         <option value="DIRECT">DIRECT</option>
                         <option value="REJECT">REJECT</option>
                     </optgroup>
-                    <optgroup label={t('outboundSelectedRules')} x-show="($root.selectedRules || []).length > 0">
-                        <template x-for="key in ($root.selectedRules || [])" x-bind:key="key">
+                    <optgroup label={t('outboundSelectedRules')} x-show="(selectedRules || []).length > 0">
+                        <template x-for="key in (selectedRules || [])" x-bind:key="key">
                             <option x-bind:value="key" x-text="CR_OUTBOUND_LABELS[key] || key"></option>
                         </template>
                     </optgroup>
@@ -285,6 +285,13 @@ export const CustomRules = (props) => {
         const CR_OUTBOUND_LABELS = ${JSON.stringify(outboundLabels)};
         const CR_STATIC_OUTBOUND_VALUES = ['Node Select', 'Auto Select', 'Fall Back', 'Manual Switch', 'DIRECT', 'REJECT'];
 
+        function readFormSelectedRules() {
+          const boxes = document.querySelectorAll('input[type="checkbox"][x-model="selectedRules"]');
+          const out = [];
+          boxes.forEach(b => { if (b.checked) out.push(b.value); });
+          return out;
+        }
+
         function readSiblingCustomRuleSets() {
           const el = document.querySelector('input[name="customRuleSets"]');
           if (!el || !el.value) return [];
@@ -314,7 +321,7 @@ export const CustomRules = (props) => {
             isValidOutbound(value) {
               if (!value) return false;
               if (CR_STATIC_OUTBOUND_VALUES.includes(value)) return true;
-              const sel = (this.$root && this.$root.selectedRules) || [];
+              const sel = readFormSelectedRules();
               if (sel.includes(value)) return true;
               if (this.customRuleSetNames().includes(value)) return true;
               return false;

@@ -129,8 +129,8 @@ export const CustomRuleSets = (props) => {
                                             <option value="DIRECT">DIRECT</option>
                                             <option value="REJECT">REJECT</option>
                                         </optgroup>
-                                        <optgroup label={t('outboundSelectedRules')} x-show="($root.selectedRules || []).length > 0">
-                                            <template x-for="key in ($root.selectedRules || [])" x-bind:key="key">
+                                        <optgroup label={t('outboundSelectedRules')} x-show="(selectedRules || []).length > 0">
+                                            <template x-for="key in (selectedRules || [])" x-bind:key="key">
                                                 <option x-bind:value="key" x-text="OUTBOUND_LABELS[key] || key"></option>
                                             </template>
                                         </optgroup>
@@ -174,6 +174,13 @@ export const CustomRuleSets = (props) => {
                 const OUTBOUND_LABELS = ${JSON.stringify(outboundLabels)};
                 const STATIC_OUTBOUND_VALUES = ['Node Select', 'Auto Select', 'Fall Back', 'Manual Switch', 'DIRECT', 'REJECT'];
 
+                function readFormSelectedRules() {
+                    const boxes = document.querySelectorAll('input[type="checkbox"][x-model="selectedRules"]');
+                    const out = [];
+                    boxes.forEach(b => { if (b.checked) out.push(b.value); });
+                    return out;
+                }
+
                 function resolveProviderUrlClient(providerId, type, format, file) {
                     const provider = RULE_SET_PROVIDERS[providerId];
                     if (!provider) return null;
@@ -206,7 +213,7 @@ export const CustomRuleSets = (props) => {
                         isValidOutbound(value, rowIdx) {
                             if (!value) return false;
                             if (STATIC_OUTBOUND_VALUES.includes(value)) return true;
-                            const sel = (this.$root && this.$root.selectedRules) || [];
+                            const sel = readFormSelectedRules();
                             if (sel.includes(value)) return true;
                             for (let i = 0; i < rowIdx; i++) {
                                 if (this.rules[i] && this.rules[i].name === value) return true;
