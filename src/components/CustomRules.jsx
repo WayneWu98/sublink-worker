@@ -2,9 +2,13 @@
 /** @jsxImportSource hono/jsx */
 
 import { ValidatedTextarea } from './ValidatedTextarea.jsx';
+import { UNIFIED_RULES } from '../config/rules.js';
 
 export const CustomRules = (props) => {
     const { t } = props;
+
+    const outboundLabels = {};
+    UNIFIED_RULES.forEach((r) => { outboundLabels[r.name] = t('outboundNames.' + r.name); });
 
     return (
         <div x-data="customRulesData()" class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
@@ -84,17 +88,34 @@ export const CustomRules = (props) => {
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Rule Name */}
+            {/* Outbound target (was free-text 'name'; now a dropdown of valid outbounds) */}
             <div class="col-span-1 md:col-span-2">
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     {t('customRuleOutboundName')}
                 </label>
-                <input
-                    type="text"
+                <select
                     x-model="rule.name"
                     class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
-                    placeholder="e.g., MyRule"
-                />
+                >
+                    <optgroup label={t('outboundBuiltIn')}>
+                        <option value="Node Select">{t('outboundNames.Node Select')}</option>
+                        <option value="Auto Select">{t('outboundNames.Auto Select')}</option>
+                        <option value="Fall Back">{t('outboundNames.Fall Back')}</option>
+                        <option value="Manual Switch">{t('outboundNames.Manual Switch')}</option>
+                        <option value="DIRECT">DIRECT</option>
+                        <option value="REJECT">REJECT</option>
+                    </optgroup>
+                    <optgroup x-bind:label="'{t('outboundSelectedRules')}'" x-show="($root.selectedRules || []).length > 0">
+                        <template x-for="key in ($root.selectedRules || [])" x-bind:key="key">
+                            <option x-bind:value="key" x-text="OUTBOUND_LABELS[key] || key"></option>
+                        </template>
+                    </optgroup>
+                    <optgroup x-bind:label="'{t('outboundPriorRulesets')}'" x-show="customRuleSetNames().length > 0">
+                        <template x-for="n in customRuleSetNames()" x-bind:key="n">
+                            <option x-bind:value="n" x-text="n"></option>
+                        </template>
+                    </optgroup>
+                </select>
             </div>
 
             {/* Domain (exact match) */}
@@ -261,6 +282,18 @@ export const CustomRules = (props) => {
 
         <script dangerouslySetInnerHTML={{
             __html: `
+        const OUTBOUND_LABELS = ${JSON.stringify(outboundLabels)};
+        const CR_STATIC_OUTBOUND_VALUES = ['Node Select', 'Auto Select', 'Fall Back', 'Manual Switch', 'DIRECT', 'REJECT'];
+
+        function readSiblingCustomRuleSets() {
+          const el = document.querySelector('input[name="customRuleSets"]');
+          if (!el || !el.value) return [];
+          try {
+            const parsed = JSON.parse(el.value);
+            return Array.isArray(parsed) ? parsed : [];
+          } catch { return []; }
+        }
+
         function customRulesData() {
           return {
             mode: 'form',
@@ -268,7 +301,31 @@ export const CustomRules = (props) => {
             jsonContent: '[]',
             jsonError: null,
             jsonValid: false,
-            
+            // Bumped whenever sibling customRuleSets changes so the dropdown re-renders
+            ruleSetsVersion: 0,
+
+            customRuleSetNames() {
+              // Reference this.ruleSetsVersion so Alpine treats this as reactive
+              void this.ruleSetsVersion;
+              const names = readSiblingCustomRuleSets().map(r => r && r.name).filter(Boolean);
+              return Array.from(new Set(names));
+            },
+
+            isValidOutbound(value) {
+              if (!value) return false;
+              if (CR_STATIC_OUTBOUND_VALUES.includes(value)) return true;
+              const sel = (this.$root && this.$root.selectedRules) || [];
+              if (sel.includes(value)) return true;
+              if (this.customRuleSetNames().includes(value)) return true;
+              return false;
+            },
+
+            validateOutbounds() {
+              this.rules.forEach((r) => {
+                if (!this.isValidOutbound(r.name)) r.name = 'Node Select';
+              });
+            },
+
             init() {
               // Watch for changes in rules to update JSON content
               this.$watch('rules', (value) => {
@@ -304,11 +361,18 @@ export const CustomRules = (props) => {
                   this.mode = 'json'; // Switch to JSON mode to show imported rules
                 }
               });
+
+              // Auto-reset invalidated outbound picks
+              window.addEventListener('selected-rules-changed', () => this.validateOutbounds());
+              window.addEventListener('custom-rulesets-changed', () => {
+                this.ruleSetsVersion++;
+                this.validateOutbounds();
+              });
             },
-            
+
             addRule() {
               this.rules.push({
-                name: '',
+                name: 'Node Select',
                 domain: '',
                 domain_suffix: '',
                 domain_keyword: '',
@@ -320,7 +384,7 @@ export const CustomRules = (props) => {
                 outbound: ''
               });
             },
-            
+
             removeRule(index) {
               this.rules.splice(index, 1);
             },

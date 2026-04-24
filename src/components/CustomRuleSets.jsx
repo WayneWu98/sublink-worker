@@ -2,11 +2,16 @@
 /** @jsxImportSource hono/jsx */
 
 import { RULE_SET_PROVIDERS } from '../config/ruleSetProviders.js';
+import { UNIFIED_RULES } from '../config/rules.js';
 
 export const CustomRuleSets = (props) => {
     const { t } = props;
     const providersJson = JSON.stringify(RULE_SET_PROVIDERS);
     const unsupportedLabel = t('ruleSetUrlPreviewUnsupported');
+
+    // Translate-label map used when rendering rule-group options in the outbound dropdown
+    const outboundLabels = {};
+    UNIFIED_RULES.forEach((r) => { outboundLabels[r.name] = t('outboundNames.' + r.name); });
 
     return (
         <div x-data="customRuleSetsData()" class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
@@ -116,12 +121,24 @@ export const CustomRuleSets = (props) => {
                                 <div class="col-span-1 md:col-span-2">
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('ruleSetOutbound')}</label>
                                     <select x-model="rule.outbound" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                                        <option value="Node Select">{t('outboundNames.Node Select')}</option>
-                                        <option value="Auto Select">{t('outboundNames.Auto Select')}</option>
-                                        <option value="Fall Back">{t('outboundNames.Fall Back')}</option>
-                                        <option value="Manual Switch">{t('outboundNames.Manual Switch')}</option>
-                                        <option value="DIRECT">DIRECT</option>
-                                        <option value="REJECT">REJECT</option>
+                                        <optgroup label={t('outboundBuiltIn')}>
+                                            <option value="Node Select">{t('outboundNames.Node Select')}</option>
+                                            <option value="Auto Select">{t('outboundNames.Auto Select')}</option>
+                                            <option value="Fall Back">{t('outboundNames.Fall Back')}</option>
+                                            <option value="Manual Switch">{t('outboundNames.Manual Switch')}</option>
+                                            <option value="DIRECT">DIRECT</option>
+                                            <option value="REJECT">REJECT</option>
+                                        </optgroup>
+                                        <optgroup x-bind:label="'{t('outboundSelectedRules')}'" x-show="($root.selectedRules || []).length > 0">
+                                            <template x-for="key in ($root.selectedRules || [])" x-bind:key="key">
+                                                <option x-bind:value="key" x-text="OUTBOUND_LABELS[key] || key"></option>
+                                            </template>
+                                        </optgroup>
+                                        <optgroup x-bind:label="'{t('outboundPriorRulesets')}'" x-show="priorRulesetNames(index).length > 0">
+                                            <template x-for="n in priorRulesetNames(index)" x-bind:key="n">
+                                                <option x-bind:value="n" x-text="n"></option>
+                                            </template>
+                                        </optgroup>
                                     </select>
                                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('ruleSetOutboundHint')}</p>
                                 </div>
@@ -144,7 +161,7 @@ export const CustomRuleSets = (props) => {
 
             {/* JSON mode */}
             <div x-show="mode === 'json'">
-                <textarea x-model="jsonContent" rows={12} class="w-full px-4 py-2 font-mono text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white" placeholder='[{"name":"MyReddit","provider":"metacubex","file":"reddit","type":"site","outbound":"Proxy"}]'></textarea>
+                <textarea x-model="jsonContent" rows={12} class="w-full px-4 py-2 font-mono text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white" placeholder='[{"name":"MyReddit","provider":"metacubex","file":"reddit","type":"site","outbound":"Node Select"}]'></textarea>
                 <p x-show="jsonError" class="mt-2 text-sm text-red-600 dark:text-red-400" x-text="jsonError"></p>
             </div>
 
@@ -154,6 +171,8 @@ export const CustomRuleSets = (props) => {
                 __html: `
                 const RULE_SET_PROVIDERS = ${providersJson};
                 const UNSUPPORTED_LABEL = ${JSON.stringify(unsupportedLabel)};
+                const OUTBOUND_LABELS = ${JSON.stringify(outboundLabels)};
+                const STATIC_OUTBOUND_VALUES = ['Node Select', 'Auto Select', 'Fall Back', 'Manual Switch', 'DIRECT', 'REJECT'];
 
                 function resolveProviderUrlClient(providerId, type, format, file) {
                     const provider = RULE_SET_PROVIDERS[providerId];
@@ -175,9 +194,34 @@ export const CustomRuleSets = (props) => {
                             const url = resolveProviderUrlClient(rule.provider, rule.type || 'site', format, rule.file);
                             return url || UNSUPPORTED_LABEL;
                         },
+                        priorRulesetNames(currentIdx) {
+                            const seen = new Set();
+                            const result = [];
+                            for (let i = 0; i < currentIdx && i < this.rules.length; i++) {
+                                const n = this.rules[i] && this.rules[i].name;
+                                if (n && !seen.has(n)) { seen.add(n); result.push(n); }
+                            }
+                            return result;
+                        },
+                        isValidOutbound(value, rowIdx) {
+                            if (!value) return false;
+                            if (STATIC_OUTBOUND_VALUES.includes(value)) return true;
+                            const sel = (this.$root && this.$root.selectedRules) || [];
+                            if (sel.includes(value)) return true;
+                            for (let i = 0; i < rowIdx; i++) {
+                                if (this.rules[i] && this.rules[i].name === value) return true;
+                            }
+                            return false;
+                        },
+                        validateOutbounds() {
+                            this.rules.forEach((r, i) => {
+                                if (!this.isValidOutbound(r.outbound, i)) r.outbound = 'Node Select';
+                            });
+                        },
                         init() {
                             this.$watch('rules', (v) => {
                                 if (this.mode === 'form') this.jsonContent = JSON.stringify(v, null, 2);
+                                window.dispatchEvent(new Event('custom-rulesets-changed'));
                             });
                             this.$watch('jsonContent', (v) => {
                                 if (this.mode === 'json') {
@@ -195,6 +239,8 @@ export const CustomRuleSets = (props) => {
                                     this.mode = 'json';
                                 }
                             });
+                            // Watch parent scope's selectedRules to auto-reset invalidated outbounds
+                            window.addEventListener('selected-rules-changed', () => this.validateOutbounds());
                         },
                         addRule() {
                             this.rules.push({
@@ -203,7 +249,16 @@ export const CustomRuleSets = (props) => {
                                 type: 'site', outbound: 'Node Select'
                             });
                         },
-                        removeRule(i) { this.rules.splice(i, 1); },
+                        removeRule(i) {
+                            const removed = this.rules[i];
+                            this.rules.splice(i, 1);
+                            const removedName = removed && removed.name;
+                            if (removedName) {
+                                this.rules.forEach(r => {
+                                    if (r.outbound === removedName) r.outbound = 'Node Select';
+                                });
+                            }
+                        },
                         clearAll() {
                             if (!confirm('${t('confirmClearAllRules')}')) return;
                             this.rules = [];

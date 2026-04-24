@@ -174,6 +174,7 @@ export const formLogicFn = (t) => {
                 this.$watch('includeAutoSelect', val => localStorage.setItem('includeAutoSelect', val));
                 this.$watch('enableClashUI', val => localStorage.setItem('enableClashUI', val));
                 this.$watch('fallbackOutbound', val => localStorage.setItem('fallbackOutbound', val));
+                this.$watch('selectedRules', () => window.dispatchEvent(new Event('selected-rules-changed')));
                 this.$watch('externalController', val => localStorage.setItem('externalController', val));
                 this.$watch('externalUiDownloadUrl', val => localStorage.setItem('externalUiDownloadUrl', val));
                 this.$watch('customUA', val => localStorage.setItem('userAgent', val));
