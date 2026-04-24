@@ -45,6 +45,7 @@ This is a community fork of **[7Sageer/sublink-worker](https://github.com/7Sagee
 - **Short-link token auth (v2.5+)** — `/shorten-v2` returns `{code, token}`; overwriting an existing short code requires the matching `X-Shortlink-Token` header. See details below.
 - **Short code loader UI + `/resolve` read auth (v2.6+)** — Explicit "Load from Code" button replaces the removed paste-auto-parse flow; `/resolve` now authenticates new-format entries. See details below.
 - **Surge `#!MANAGED-CONFIG` short-URL preservation (v2.7+)** — Surge configs fetched via a short link embed the short URL in `MANAGED-CONFIG` so short-code remaps propagate without client reconfiguration. See details below.
+- **Rule groups expansion (v2.9+)** — 15 extended built-in rule groups, subscribable Custom RuleSets backed by a provider dictionary (MetaCubeX / blackmatrix7 / Loyalsoldier / ACL4SSR / custom URL) that each register their own proxy group, Custom Rules outbound as a dropdown of valid targets, configurable Fall Back default, and `customRuleSets` + `fallback_outbound` share-URL params. See the Rule Groups and Changelog sections below.
 
 Version-specific sections further down in this README contain the migration notes for each change.
 
@@ -129,6 +130,20 @@ Subscribe to any public rule-set file and register it as an independent proxy gr
 - **Outbound**: proxy group for matched traffic (`Proxy`, `Direct`, `Reject`, or any selector name)
 
 Entries round-trip through share links via the `customRuleSets` URL parameter. Providers that do not publish a given format (e.g. ACL4SSR has no sing-box `.srs`) are silently skipped on export — mixed-format subscriptions stay valid.
+
+### Fall Back outbound
+
+The Fall Back selector's default member (what unmatched traffic uses until the user switches) is now configurable from Advanced Options → General Settings. Choose `Node Select` (default), `DIRECT`, or `REJECT`.
+
+## 🗒️ Changelog
+
+### v2.9.0
+
+- **15 extended rule groups** behind a collapsed disclosure (Discord, WhatsApp, Signal, Line, Zoom, Spotify, News, Reddit, Twitch, Pixiv, Developer, OpenAI, Anthropic, Speedtest, Porn). Presets are unchanged.
+- **Custom RuleSets** — subscribe to public rule-set files (MetaCubeX / blackmatrix7 / Loyalsoldier / ACL4SSR / custom URL). Each entry becomes its own proxy group; the form's `Outbound` field is that group's default member. Share-link round-trip via `customRuleSets`.
+- **Custom Rules outbound** is now a dropdown of valid outbounds (built-in + selected rule groups + custom rule sets) instead of a free-text group name.
+- **Fall Back outbound** preference (Node Select / DIRECT / REJECT).
+- Global `<select>` chevron + consistent padding, animated row add/delete, auto-reset of referenced outbounds when the source is removed.
 
 ## 🤝 Contributing
 

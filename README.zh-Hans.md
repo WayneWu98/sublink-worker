@@ -45,6 +45,7 @@
 - **短链 Token 鉴权（v2.5+）** —— `/shorten-v2` 返回 `{code, token}`；覆盖已存在的短码需要携带匹配的 `X-Shortlink-Token` 请求头。详见下文。
 - **短码加载 UI + `/resolve` 读取鉴权（v2.6+）** —— 新增显式的「通过短码加载」按钮，取代原先粘贴自动解析的流程；`/resolve` 对新格式条目启用鉴权。详见下文。
 - **Surge `#!MANAGED-CONFIG` 短链保留（v2.7+）** —— 通过短链获取的 Surge 配置会在 `MANAGED-CONFIG` 指令中保留短链 URL，短码重新映射可自动生效，无需在客户端重新配置。详见下文。
+- **规则组扩展（v2.9+）** —— 新增 15 个内置扩展规则组；可订阅的「自定义规则集」支持 MetaCubeX / blackmatrix7 / Loyalsoldier / ACL4SSR / 自定义 URL 五种源，每条自动生成独立策略组；自定义规则的「出站」改为下拉选择有效目标；新增「漏网之鱼出站」设置；分享链接新增 `customRuleSets` 和 `fallback_outbound` 参数。详见下方「规则组」与「更新日志」章节。
 
 README 下方的版本对应章节包含每项变更的迁移说明。
 
@@ -129,6 +130,20 @@ Sing-Box · Clash · Xray/V2Ray · Surge
 - **出站**：命中流量的目标策略（`Proxy`、`Direct`、`Reject` 或任意选择器名）
 
 自定义规则集会随分享链接的 `customRuleSets` 参数一并往返。若某个源没有对应格式（例如 ACL4SSR 没有 sing-box `.srs`），导出该格式时会自动跳过，不会影响其他格式。
+
+### 漏网之鱼出站
+
+未命中任何规则时流量走哪里现在可以在「高级选项 → 通用设置」里选——`节点选择`（默认）、`DIRECT` 或 `REJECT`。
+
+## 🗒️ 更新日志
+
+### v2.9.0
+
+- **15 个扩展规则组**，默认折叠在展开面板里（Discord / WhatsApp / Signal / Line / Zoom / Spotify / News / Reddit / Twitch / Pixiv / Developer / OpenAI / Anthropic / Speedtest / Porn），预设保持不变。
+- **自定义规则集**——订阅任意公开 ruleset 文件（MetaCubeX / blackmatrix7 / Loyalsoldier / ACL4SSR / 自定义 URL），每条会生成独立的策略组，表单中的「出站」字段作为该组的默认选项。分享链接通过 `customRuleSets` 参数往返。
+- **自定义规则的「出站」**从自由文本改为下拉（内置出站 + 已选规则组 + 上方自定义规则集）。
+- **漏网之鱼出站**可配置（节点选择 / DIRECT / REJECT）。
+- 统一的 `<select>` chevron 箭头与内边距、添加/删除行动画、引用对象删除后自动回退默认出站。
 
 ## 🤝 贡献
 
