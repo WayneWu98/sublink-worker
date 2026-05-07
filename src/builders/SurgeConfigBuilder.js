@@ -119,6 +119,24 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
                     surgeProxy += `, alpn=${proxy.tls.alpn.join(',')}`;
                 }
                 break;
+            case 'snell':
+                surgeProxy = `${proxy.tag} = snell, ${proxy.server}, ${proxy.server_port}, psk=${proxy.psk}`;
+                if (proxy.version !== undefined) {
+                    surgeProxy += `, version=${proxy.version}`;
+                }
+                if (proxy.obfs?.type) {
+                    surgeProxy += `, obfs=${proxy.obfs.type}`;
+                    if (proxy.obfs.host) {
+                        surgeProxy += `, obfs-host=${proxy.obfs.host}`;
+                    }
+                }
+                if (proxy.tcp_fast_open === true) {
+                    surgeProxy += ', tfo=true';
+                }
+                if (proxy.reuse === true) {
+                    surgeProxy += ', reuse=true';
+                }
+                break;
             case 'tuic':
                 surgeProxy = `${proxy.tag} = tuic, ${proxy.server}, ${proxy.server_port}, password=${proxy.password}, uuid=${proxy.uuid}`;
                 if (proxy.tls?.server_name) {

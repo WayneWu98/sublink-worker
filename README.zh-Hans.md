@@ -96,7 +96,9 @@
 ## ✨ 功能特性
 
 ### 支持的协议
-ShadowSocks · VMess · VLESS · Hysteria2 · Trojan · TUIC
+ShadowSocks · VMess · VLESS · Hysteria2 · Trojan · TUIC · Snell¹
+
+¹ Snell 在 Surge 与 Clash（Mihomo）侧原生输出。Sing-Box 无原生 Snell 出站，Snell 节点会被跳过并在控制台输出警告。
 
 ### 客户端支持
 Sing-Box · Clash · Xray/V2Ray · Surge
@@ -105,6 +107,19 @@ Sing-Box · Clash · Xray/V2Ray · Surge
 - Base64 订阅
 - HTTP/HTTPS 订阅
 - 完整配置（Sing-Box JSON、Clash YAML、Surge INI）
+- `snell://` 分享链接（本工具自定义格式 —— 见下方 [Snell](#snell) 段）
+
+### Snell
+
+- **支持输入：**
+  - Surge 配置整段（含 `[Proxy]` 段直接粘贴）
+  - Clash YAML（`type: snell` 节点，支持 `obfs-opts: {mode, host}`）
+  - `snell://` 分享链接 —— *本工具自定义格式，无社区标准*：
+    ```
+    snell://<url-encoded-psk>@<host>:<port>?version=<n>&obfs=<http|tls>&obfs-host=<h>&tfo=<bool>&reuse=<bool>&udp=<bool>#<name>
+    ```
+    必填项仅 `psk` 与 `host:port`。别处（Surgio 等）生成的 `snell://` URL 各家约定不同，不保证能直接解析。
+- **输出：** Surge ✓ 原生 · Clash（Mihomo）✓ 原生 · Sing-Box ✗ 跳过并控制台警告。
 
 ### 核心能力
 - 从多种来源导入订阅
@@ -137,6 +152,10 @@ Sing-Box · Clash · Xray/V2Ray · Surge
 未命中任何规则时流量走哪里现在可以在「高级选项 → 通用设置」里选——`节点选择`（默认）、`DIRECT` 或 `REJECT`。
 
 ## 🗒️ 更新日志
+
+### v2.10.0
+
+- **新增 Snell 协议支持。** 可识别 Surge 配置段、Clash YAML（`type: snell`，含 `obfs-opts`）以及本工具自定义的 `snell://` 分享链接形式（`snell://<psk>@<host>:<port>?version=&obfs=&obfs-host=&tfo=&reuse=&udp=#name`）。输出端 Surge 与 Clash（Mihomo）原生支持；Sing-Box 无原生 Snell 出站，遇到 Snell 节点时会跳过并在控制台输出警告，不进入策略组。`snell://` 链接为本工具自定义格式，**非社区标准** —— 来自其他工具（Surgio 等）的 `snell://` URL 各家约定不同,不保证可直接解析。
 
 ### v2.9.2
 

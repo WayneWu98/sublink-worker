@@ -96,7 +96,9 @@ If your subscription contains credentials you consider sensitive, **self-host** 
 ## ✨ Features
 
 ### Supported Protocols
-ShadowSocks • VMess • VLESS • Hysteria2 • Trojan • TUIC
+ShadowSocks • VMess • VLESS • Hysteria2 • Trojan • TUIC • Snell¹
+
+¹ Snell outputs natively to Surge and Clash (Mihomo). Sing-Box has no native Snell outbound — Snell nodes are dropped with a console warning.
 
 ### Client Support
 Sing-Box • Clash • Xray/V2Ray • Surge
@@ -105,6 +107,19 @@ Sing-Box • Clash • Xray/V2Ray • Surge
 - Base64 subscriptions
 - HTTP/HTTPS subscriptions
 - Full configs (Sing-Box JSON, Clash YAML, Surge INI)
+- `snell://` share-links (tool-internal format — see [Snell](#snell) below)
+
+### Snell
+
+- **Input:**
+  - Surge config block (paste full text containing `[Proxy]` section)
+  - Clash YAML (`type: snell` node, supports `obfs-opts: {mode, host}`)
+  - `snell://` share-link — *tool-internal format, not a community standard*:
+    ```
+    snell://<url-encoded-psk>@<host>:<port>?version=<n>&obfs=<http|tls>&obfs-host=<h>&tfo=<bool>&reuse=<bool>&udp=<bool>#<name>
+    ```
+    Only `psk` and `host:port` are required. `snell://` URLs from other tools (Surgio, etc.) use different conventions and are not guaranteed to parse.
+- **Output:** Surge ✓ native · Clash (Mihomo) ✓ native · Sing-Box ✗ dropped with a console warning.
 
 ### Core Capabilities
 - Import subscriptions from multiple sources
@@ -137,6 +152,10 @@ Entries round-trip through share links via the `customRuleSets` URL parameter. P
 The Fall Back selector's default member (what unmatched traffic uses until the user switches) is now configurable from Advanced Options → General Settings. Choose `Node Select` (default), `DIRECT`, or `REJECT`.
 
 ## 🗒️ Changelog
+
+### v2.10.0
+
+- **Snell protocol support.** Parses Snell nodes from Surge config blocks, Clash YAML (`type: snell` with `obfs-opts`), and a new tool-internal `snell://` share-link form (`snell://<psk>@<host>:<port>?version=&obfs=&obfs-host=&tfo=&reuse=&udp=#name`). Outputs natively to Surge and Clash (Mihomo); Sing-Box has no native Snell outbound, so Snell nodes are dropped with a console warning and excluded from selector groups. The `snell://` URL is *not* a community standard — URLs from other tools (Surgio, etc.) follow different conventions and are not guaranteed to round-trip.
 
 ### v2.9.2
 

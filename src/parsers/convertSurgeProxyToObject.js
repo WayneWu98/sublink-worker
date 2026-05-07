@@ -185,6 +185,22 @@ export function convertSurgeProxyToObject(line) {
                 } : undefined
             };
 
+        case 'snell':
+            return {
+                tag,
+                type: 'snell',
+                server,
+                server_port: port,
+                psk: params.psk,
+                version: params.version !== undefined ? parseInt(params.version) : undefined,
+                tcp_fast_open: params.tfo !== undefined ? parseBool(params.tfo) : undefined,
+                reuse: params.reuse !== undefined ? parseBool(params.reuse) : undefined,
+                obfs: params.obfs ? {
+                    type: params.obfs,
+                    host: params['obfs-host'] || undefined
+                } : undefined
+            };
+
         case 'http':
         case 'https':
             // Skip HTTP/HTTPS proxy types

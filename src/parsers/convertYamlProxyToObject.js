@@ -258,6 +258,24 @@ export function convertYamlProxyToObject(p) {
                 tls
             };
         }
+        case 'snell': {
+            const obfsOpts = p['obfs-opts'];
+            return {
+                tag: p.name,
+                type: 'snell',
+                server: p.server,
+                server_port: parseInt(p.port),
+                psk: p.psk,
+                version: p.version !== undefined ? parseInt(p.version) : undefined,
+                tcp_fast_open: typeof p.tfo !== 'undefined' ? !!p.tfo : undefined,
+                reuse: typeof p.reuse !== 'undefined' ? !!p.reuse : undefined,
+                udp: typeof p.udp !== 'undefined' ? !!p.udp : undefined,
+                obfs: obfsOpts && obfsOpts.mode ? {
+                    type: obfsOpts.mode,
+                    host: obfsOpts.host || undefined
+                } : undefined
+            };
+        }
         default:
             return null;
     }
