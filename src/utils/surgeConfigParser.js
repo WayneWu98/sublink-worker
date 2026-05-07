@@ -78,13 +78,19 @@ export function convertSurgeIniToJson(content) {
         }
     }
 
-    const recognizedKeys = ['general', 'replica', 'proxies', 'proxy-groups', 'rules',
-        ...SURGE_PASSTHROUGH_SECTIONS.map(s => s.storeKey)];
-    if (!recognizedKeys.some(k => config[k])) {
+    if (!hasRecognizedSurgeKey(config)) {
         throw new Error('Unable to parse Surge INI content');
     }
 
     return config;
+}
+
+const RECOGNIZED_SURGE_KEYS = ['general', 'replica', 'proxies', 'proxy-groups', 'rules',
+    ...SURGE_PASSTHROUGH_SECTIONS.map(s => s.storeKey)];
+
+function hasRecognizedSurgeKey(config) {
+    if (!config || typeof config !== 'object' || Array.isArray(config)) return false;
+    return RECOGNIZED_SURGE_KEYS.some(k => config[k] !== undefined && config[k] !== null);
 }
 
 export function parseSurgeConfigInput(content) {
@@ -92,10 +98,20 @@ export function parseSurgeConfigInput(content) {
     if (!trimmed) {
         throw new Error('Config content is empty');
     }
+    let parsedJson;
+    let isJson = false;
     try {
-        return { configObject: JSON.parse(trimmed), convertedFromIni: false };
+        parsedJson = JSON.parse(trimmed);
+        isJson = true;
     } catch {
-        const converted = convertSurgeIniToJson(content);
-        return { configObject: converted, convertedFromIni: true };
+        // not JSON; fall through to INI parsing
     }
+    if (isJson) {
+        if (!hasRecognizedSurgeKey(parsedJson)) {
+            throw new Error('Surge JSON config must contain at least one recognized section (general, replica, proxies, proxy-groups, rules, host, url-rewrite, header-rewrite, mitm, script, ssid-setting)');
+        }
+        return { configObject: parsedJson, convertedFromIni: false };
+    }
+    const converted = convertSurgeIniToJson(content);
+    return { configObject: converted, convertedFromIni: true };
 }

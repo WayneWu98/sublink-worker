@@ -113,4 +113,27 @@ example-script = type=http-response,pattern=^https://example\\.com,script-path=f
         const { configObject } = parseSurgeConfigInput(ini);
         expect(configObject.rules).toEqual(['DOMAIN-SUFFIX,example.com,DIRECT']);
     });
+
+    it('accepts a JSON-format Surge config with passthrough host field', () => {
+        const json = JSON.stringify({ host: ['*.company.ponte = 127.0.0.1'] });
+        const { configObject, convertedFromIni } = parseSurgeConfigInput(json);
+        expect(convertedFromIni).toBe(false);
+        expect(configObject.host).toEqual(['*.company.ponte = 127.0.0.1']);
+    });
+
+    it('rejects empty JSON object (no recognized Surge sections)', () => {
+        expect(() => parseSurgeConfigInput('{}')).toThrow();
+    });
+
+    it('rejects JSON null', () => {
+        expect(() => parseSurgeConfigInput('null')).toThrow();
+    });
+
+    it('rejects JSON array (must be an object with sections)', () => {
+        expect(() => parseSurgeConfigInput('["foo"]')).toThrow();
+    });
+
+    it('rejects JSON object with only unknown keys', () => {
+        expect(() => parseSurgeConfigInput('{"foo": "bar", "baz": 1}')).toThrow();
+    });
 });
