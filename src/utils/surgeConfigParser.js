@@ -11,6 +11,23 @@ function parseSurgeValue(rawValue = '') {
     return unquoted;
 }
 
+// Sections that are stored verbatim (one raw line per entry) and emitted back
+// in the same form. The map key is the lowercase section header found in the
+// INI ("url rewrite"); the value is the storage key used in the parsed object
+// AND the canonical capitalization used when emitting (`[URL Rewrite]`).
+export const SURGE_PASSTHROUGH_SECTIONS = [
+    { iniKey: 'host', storeKey: 'host', display: 'Host' },
+    { iniKey: 'url rewrite', storeKey: 'url-rewrite', display: 'URL Rewrite' },
+    { iniKey: 'header rewrite', storeKey: 'header-rewrite', display: 'Header Rewrite' },
+    { iniKey: 'mitm', storeKey: 'mitm', display: 'MITM' },
+    { iniKey: 'script', storeKey: 'script', display: 'Script' },
+    { iniKey: 'ssid setting', storeKey: 'ssid-setting', display: 'SSID Setting' }
+];
+
+const PASSTHROUGH_BY_INI_KEY = new Map(
+    SURGE_PASSTHROUGH_SECTIONS.map(s => [s.iniKey, s])
+);
+
 export function convertSurgeIniToJson(content) {
     const lines = content.split(/\r?\n/);
     const config = {};
@@ -54,12 +71,16 @@ export function convertSurgeIniToJson(content) {
             ensureArray('proxy-groups').push(line);
         } else if (sectionName === 'rule') {
             ensureArray('rules').push(line);
+        } else if (PASSTHROUGH_BY_INI_KEY.has(sectionName)) {
+            ensureArray(PASSTHROUGH_BY_INI_KEY.get(sectionName).storeKey).push(line);
         } else {
             ensureArray(sectionName).push(line);
         }
     }
 
-    if (!config.general && !config.replica && !config.proxies && !config['proxy-groups']) {
+    const recognizedKeys = ['general', 'replica', 'proxies', 'proxy-groups', 'rules',
+        ...SURGE_PASSTHROUGH_SECTIONS.map(s => s.storeKey)];
+    if (!recognizedKeys.some(k => config[k])) {
         throw new Error('Unable to parse Surge INI content');
     }
 

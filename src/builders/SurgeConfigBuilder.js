@@ -555,6 +555,24 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
 
         finalConfig.push('FINAL,' + this.t('outboundNames.Fall Back'));
 
+        // Passthrough sections from a user-supplied base config (Host, URL Rewrite,
+        // Header Rewrite, MITM, Script, SSID Setting). Each is stored as an array
+        // of raw lines, emitted verbatim in canonical Surge order.
+        const passthroughOut = [
+            { storeKey: 'host', display: 'Host' },
+            { storeKey: 'url-rewrite', display: 'URL Rewrite' },
+            { storeKey: 'header-rewrite', display: 'Header Rewrite' },
+            { storeKey: 'mitm', display: 'MITM' },
+            { storeKey: 'script', display: 'Script' },
+            { storeKey: 'ssid-setting', display: 'SSID Setting' }
+        ];
+        for (const { storeKey, display } of passthroughOut) {
+            const lines = this.config[storeKey];
+            if (!Array.isArray(lines) || lines.length === 0) continue;
+            finalConfig.push(`\n[${display}]`);
+            finalConfig.push(...lines);
+        }
+
         return finalConfig.join('\n');
     }
 

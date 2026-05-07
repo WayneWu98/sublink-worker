@@ -12,6 +12,17 @@ export const formLogicFn = (t) => {
             return unquoted;
         };
 
+        // Mirrors SURGE_PASSTHROUGH_SECTIONS in src/utils/surgeConfigParser.js.
+        const SURGE_PASSTHROUGH_SECTIONS = [
+            { iniKey: 'host', storeKey: 'host' },
+            { iniKey: 'url rewrite', storeKey: 'url-rewrite' },
+            { iniKey: 'header rewrite', storeKey: 'header-rewrite' },
+            { iniKey: 'mitm', storeKey: 'mitm' },
+            { iniKey: 'script', storeKey: 'script' },
+            { iniKey: 'ssid setting', storeKey: 'ssid-setting' }
+        ];
+        const PASSTHROUGH_BY_INI_KEY = new Map(SURGE_PASSTHROUGH_SECTIONS.map(s => [s.iniKey, s]));
+
         const convertSurgeIniToJson = (content) => {
             const lines = content.split(/\r?\n/);
             const config = {};
@@ -48,11 +59,15 @@ export const formLogicFn = (t) => {
                     ensureArray('proxy-groups').push(line);
                 } else if (sectionName === 'rule') {
                     ensureArray('rules').push(line);
+                } else if (PASSTHROUGH_BY_INI_KEY.has(sectionName)) {
+                    ensureArray(PASSTHROUGH_BY_INI_KEY.get(sectionName).storeKey).push(line);
                 } else {
                     ensureArray(sectionName).push(line);
                 }
             }
-            if (!config.general && !config.replica && !config.proxies && !config['proxy-groups']) {
+            const recognizedKeys = ['general', 'replica', 'proxies', 'proxy-groups', 'rules',
+                ...SURGE_PASSTHROUGH_SECTIONS.map(s => s.storeKey)];
+            if (!recognizedKeys.some(k => config[k])) {
                 throw new Error('Unable to parse Surge INI content');
             }
             return config;
