@@ -74,3 +74,30 @@ describe('SurgeConfigBuilder — DEVICE outbound on custom rules', () => {
         expect(text).not.toContain('outboundNames.DEVICE');
     });
 });
+
+describe('SurgeConfigBuilder — DEVICE outbound on custom rule sets', () => {
+    it('emits RULE-SET pointing at DEVICE:tower instead of a wrapper group', async () => {
+        const customRuleSets = [
+            { name: 'MyDev', provider: 'metacubex', file: 'reddit', type: 'site', outbound: 'DEVICE:tower' }
+        ];
+        const builder = new SurgeConfigBuilder(
+            SAMPLE, ['Non-China'], [], null, 'en', '', false, true, customRuleSets
+        );
+        const text = await builder.build();
+        expect(text).toMatch(/RULE-SET,.*\/geosite\/reddit\.conf,DEVICE:tower/);
+        const proxyGroupSection = text.split('[Proxy Group]')[1].split('[Rule]')[0];
+        expect(proxyGroupSection).not.toContain('MyDev =');
+        expect(text).not.toMatch(/RULE-SET,.*reddit\.conf,MyDev/);
+    });
+
+    it('preserves no-resolve suffix for ip-type rule sets with DEVICE outbound', async () => {
+        const customRuleSets = [
+            { name: 'IpDev', provider: 'metacubex', file: 'cn', type: 'ip', outbound: 'DEVICE:tower' }
+        ];
+        const builder = new SurgeConfigBuilder(
+            SAMPLE, ['Non-China'], [], null, 'en', '', false, true, customRuleSets
+        );
+        const text = await builder.build();
+        expect(text).toMatch(/RULE-SET,.*,DEVICE:tower,no-resolve/);
+    });
+});

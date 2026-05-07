@@ -346,6 +346,7 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
             const name = (item.name && item.name.trim()) || (item.file && item.file.trim());
             if (!name) return;
             if (RESERVED_OUTBOUNDS.has(name.toUpperCase())) return;
+            if (isDeviceOutbound(item.outbound)) return;
             if (this.hasProxyGroup(name)) return;
             let options = this.buildAggregatedOptions(proxyList);
             const def = this.resolveCustomRuleSetDefault(item);
@@ -359,6 +360,7 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
     resolveCustomRuleSetDefault(item) {
         const raw = item?.outbound || 'Node Select';
         if (raw === 'DIRECT' || raw === 'REJECT') return raw;
+        if (isDeviceOutbound(raw)) return raw;
         return this.t('outboundNames.' + raw);
     }
 
@@ -517,17 +519,18 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
         });
 
         // customRuleSets first — higher priority than built-in rules.
-        // Route to the new proxy group named `name` (added by addCustomRuleSetGroups).
+        // Route to the new proxy group named `name`, OR pass DEVICE:xxx through directly.
         (this.customRuleSets || []).forEach(item => {
             if (!item || !item.type) return;
             const name = (item.name && item.name.trim()) || (item.file && item.file.trim());
             if (!name) return;
             const url = resolveCustomRuleSetUrl(item, 'surge');
             if (!url) return;
+            const policy = isDeviceOutbound(item.outbound) ? item.outbound : name;
             if (item.type === 'site') {
-                finalConfig.push(`RULE-SET,${url},${name}`);
+                finalConfig.push(`RULE-SET,${url},${policy}`);
             } else {
-                finalConfig.push(`RULE-SET,${url},${name},no-resolve`);
+                finalConfig.push(`RULE-SET,${url},${policy},no-resolve`);
             }
         });
 
