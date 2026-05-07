@@ -101,3 +101,49 @@ describe('SurgeConfigBuilder — DEVICE outbound on custom rule sets', () => {
         expect(text).toMatch(/RULE-SET,.*,DEVICE:tower,no-resolve/);
     });
 });
+
+import { ClashConfigBuilder } from '../src/builders/ClashConfigBuilder.js';
+import yaml from 'js-yaml';
+
+describe('ClashConfigBuilder — DEVICE outbound is dropped', () => {
+    it('drops customRules with DEVICE name from YAML rules', async () => {
+        const customRules = [
+            { name: 'DEVICE:my-iphone', domain_suffix: 'work.example.com' }
+        ];
+        const builder = new ClashConfigBuilder(
+            SAMPLE, ['Non-China'], customRules, null, 'en', '', false, false, '', '', true, []
+        );
+        const text = await builder.build();
+        expect(text).not.toContain('DEVICE:my-iphone');
+        expect(text).not.toContain('work.example.com');
+    });
+
+    it('drops customRuleSets with DEVICE outbound — no group, no provider, no rule line', async () => {
+        const customRuleSets = [
+            { name: 'MyDev', provider: 'metacubex', file: 'reddit', type: 'site', outbound: 'DEVICE:tower' }
+        ];
+        const builder = new ClashConfigBuilder(
+            SAMPLE, ['Non-China'], [], null, 'en', '', false, false, '', '', true, customRuleSets
+        );
+        const text = await builder.build();
+        const config = yaml.load(text);
+        expect((config['proxy-groups'] || []).find(g => g.name === 'MyDev')).toBeUndefined();
+        expect((config['rule-providers'] || {})['MyDev']).toBeUndefined();
+        expect(JSON.stringify(config.rules)).not.toContain('MyDev');
+        expect(JSON.stringify(config.rules)).not.toContain('DEVICE:tower');
+    });
+
+    it('keeps non-DEVICE customRuleSets alongside DEVICE ones', async () => {
+        const customRuleSets = [
+            { name: 'MyDev',    provider: 'metacubex', file: 'reddit',  type: 'site', outbound: 'DEVICE:tower' },
+            { name: 'MyReddit', provider: 'metacubex', file: 'reddit',  type: 'site', outbound: 'Node Select' }
+        ];
+        const builder = new ClashConfigBuilder(
+            SAMPLE, ['Non-China'], [], null, 'en', '', false, false, '', '', true, customRuleSets
+        );
+        const text = await builder.build();
+        const config = yaml.load(text);
+        expect((config['rule-providers'] || {})['MyReddit']).toBeDefined();
+        expect((config['rule-providers'] || {})['MyDev']).toBeUndefined();
+    });
+});

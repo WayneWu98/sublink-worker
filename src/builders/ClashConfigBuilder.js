@@ -1,6 +1,6 @@
 import yaml from 'js-yaml';
 import { CLASH_CONFIG, generateRules, generateClashRuleSets, getOutbounds, PREDEFINED_RULE_SETS, DIRECT_DEFAULT_RULES } from '../config/index.js';
-import { BaseConfigBuilder, RESERVED_OUTBOUNDS } from './BaseConfigBuilder.js';
+import { BaseConfigBuilder, RESERVED_OUTBOUNDS, isDeviceOutbound } from './BaseConfigBuilder.js';
 import { deepCopy, groupProxiesByCountry } from '../utils.js';
 import { addProxyWithDedup } from './helpers/proxyHelpers.js';
 import { buildSelectorMembers, buildNodeSelectMembers, buildCustomRuleMembers, uniqueNames } from './helpers/groupBuilder.js';
@@ -451,6 +451,7 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
             this.customRules.forEach(rule => {
                 // Skip built-in outbound names to avoid shadowing them with a same-named group.
                 if (RESERVED_OUTBOUNDS.has(String(rule.name || '').toUpperCase())) return;
+                if (isDeviceOutbound(rule.name)) return;
                 const name = this.t(`outboundNames.${rule.name}`);
                 if (!this.hasProxyGroup(name)) {
                     const proxies = buildCustomRuleMembers({
@@ -481,6 +482,7 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
             const name = (item.name && item.name.trim()) || (item.file && item.file.trim());
             if (!name) return;
             if (RESERVED_OUTBOUNDS.has(name.toUpperCase())) return;
+            if (isDeviceOutbound(item.outbound)) return;
             if (this.hasProxyGroup(name)) return;
             let proxies = this.buildSelectGroupMembers(proxyList);
             const def = this.resolveCustomRuleSetDefault(item);
@@ -699,9 +701,11 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
     }
 
     formatConfig() {
-        const rules = this.generateRules();
+        const effectiveCustomRules = (this.customRules || []).filter(r => !isDeviceOutbound(r?.name));
+        const effectiveCustomRuleSets = (this.customRuleSets || []).filter(r => !isDeviceOutbound(r?.outbound));
+        const rules = generateRules(this.selectedRules, effectiveCustomRules, effectiveCustomRuleSets);
         const useMrs = supportsMrsFormat(this.userAgent);
-        const { site_rule_providers, ip_rule_providers } = generateClashRuleSets(this.selectedRules, this.customRules, useMrs, this.customRuleSets);
+        const { site_rule_providers, ip_rule_providers } = generateClashRuleSets(this.selectedRules, effectiveCustomRules, useMrs, effectiveCustomRuleSets);
         this.config['rule-providers'] = {
             ...site_rule_providers,
             ...ip_rule_providers
