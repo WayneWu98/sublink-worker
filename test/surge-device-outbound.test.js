@@ -147,3 +147,35 @@ describe('ClashConfigBuilder — DEVICE outbound is dropped', () => {
         expect((config['rule-providers'] || {})['MyDev']).toBeUndefined();
     });
 });
+
+import { SingboxConfigBuilder } from '../src/builders/SingboxConfigBuilder.js';
+
+describe('SingboxConfigBuilder — DEVICE outbound is dropped', () => {
+    it('drops customRules with DEVICE name from route.rules', async () => {
+        const customRules = [
+            { name: 'DEVICE:my-iphone', domain_suffix: 'work.example.com' }
+        ];
+        const builder = new SingboxConfigBuilder(
+            SAMPLE, ['Non-China'], customRules, null, 'en', '', false, false, '', '', '1.12', true, []
+        );
+        const config = await builder.build();
+        const allRulesJson = JSON.stringify(config.route?.rules || []);
+        expect(allRulesJson).not.toContain('DEVICE:my-iphone');
+        expect(allRulesJson).not.toContain('work.example.com');
+    });
+
+    it('drops customRuleSets with DEVICE outbound — no rule_set tag, no selector, no rule', async () => {
+        const customRuleSets = [
+            { name: 'MyDev', provider: 'metacubex', file: 'reddit', type: 'site', outbound: 'DEVICE:tower' }
+        ];
+        const builder = new SingboxConfigBuilder(
+            SAMPLE, ['Non-China'], [], null, 'en', '', false, false, '', '', '1.12', true, customRuleSets
+        );
+        const config = await builder.build();
+        const ruleSetTags = (config.route?.rule_set || []).map(r => r.tag);
+        expect(ruleSetTags).not.toContain('MyDev');
+        const selectorTags = (config.outbounds || []).map(o => o.tag);
+        expect(selectorTags).not.toContain('MyDev');
+        expect(JSON.stringify(config.route?.rules || [])).not.toContain('MyDev');
+    });
+});
