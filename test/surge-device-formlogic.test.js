@@ -24,4 +24,14 @@ describe('formLogic — surgeDevices URL persistence', () => {
         expect(surgeIdx).toBeLessThan(ruleSetsIdx);
         expect(surgeIdx).toBeLessThan(rulesIdx);
     });
+
+    it('both URL-building paths (getSubconverterUrl AND submitForm) include surgeDevices', () => {
+        // Regression: submitForm previously omitted surgeDevices, so the
+        // generated /surge link → shorten flow lost the device list. Both
+        // independent params builders must read the hidden input.
+        const inputReads = fnString.match(/input\[name="surgeDevices"\]/g) || [];
+        const paramAppends = fnString.match(/params\.append\(\s*['"]surgeDevices['"]\s*,/g) || [];
+        expect(inputReads.length).toBeGreaterThanOrEqual(2);
+        expect(paramAppends.length).toBeGreaterThanOrEqual(2);
+    });
 });

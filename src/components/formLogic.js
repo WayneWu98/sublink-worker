@@ -439,6 +439,10 @@ export const formLogicFn = (t) => {
                     const customRuleSetsInput = document.querySelector('input[name="customRuleSets"]');
                     const customRuleSets = customRuleSetsInput && customRuleSetsInput.value ? JSON.parse(customRuleSetsInput.value) : [];
 
+                    // Get Surge devices from the child component via the hidden input
+                    const surgeDevicesInput = document.querySelector('input[name="surgeDevices"]');
+                    const surgeDevices = surgeDevicesInput && surgeDevicesInput.value ? JSON.parse(surgeDevicesInput.value) : [];
+
                     // Construct URLs
                     const origin = window.location.origin;
                     const params = new URLSearchParams();
@@ -448,6 +452,9 @@ export const formLogicFn = (t) => {
                     params.append('customRules', JSON.stringify(customRules));
                     if (Array.isArray(customRuleSets) && customRuleSets.length > 0) {
                         params.append('customRuleSets', JSON.stringify(customRuleSets));
+                    }
+                    if (Array.isArray(surgeDevices) && surgeDevices.length > 0) {
+                        params.append('surgeDevices', JSON.stringify(surgeDevices));
                     }
 
                     if (this.groupByCountry) params.append('group_by_country', 'true');
