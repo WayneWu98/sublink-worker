@@ -42,6 +42,14 @@ describe('sing-box 1.13+ compatibility: no legacy inbound fields', () => {
         }
     });
 
+    it('base configs should not contain legacy special outbounds', () => {
+        for (const config of [SING_BOX_CONFIG, SING_BOX_CONFIG_V1_11]) {
+            const outboundTypes = config.outbounds.map(outbound => outbound.type);
+            expect(outboundTypes).not.toContain('block');
+            expect(outboundTypes).not.toContain('dns');
+        }
+    });
+
     it('built config (v1.12) should have sniff as route rule action, not on inbounds', async () => {
         const builder = new SingboxConfigBuilder(
             sampleInput, [], [], null, 'zh-CN', null, false
