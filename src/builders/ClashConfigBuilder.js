@@ -85,8 +85,7 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
      */
     generateProxyProviders() {
         const providers = {};
-        this.providerUrls.forEach((url, index) => {
-            const name = `_auto_provider_${index + 1}`;
+        this.getAutoProviderDescriptors(this.getExistingProviderNames()).forEach(({ name, url }) => {
             providers[name] = {
                 type: 'http',
                 url: url,
@@ -109,7 +108,13 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
      * @returns {string[]} - Array of provider names
      */
     getProviderNames() {
-        return this.providerUrls.map((_, index) => `_auto_provider_${index + 1}`);
+        return this.getAutoProviderDescriptors(this.getExistingProviderNames()).map(provider => provider.name);
+    }
+
+    getExistingProviderNames() {
+        return this.config?.['proxy-providers'] && typeof this.config['proxy-providers'] === 'object'
+            ? Object.keys(this.config['proxy-providers'])
+            : [];
     }
 
     /**
@@ -117,9 +122,7 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
      * @returns {string[]} - Array of provider names
      */
     getAllProviderNames() {
-        const existingProviders = this.config?.['proxy-providers'] && typeof this.config['proxy-providers'] === 'object'
-            ? Object.keys(this.config['proxy-providers'])
-            : [];
+        const existingProviders = this.getExistingProviderNames();
         const autoProviders = this.getProviderNames();
         return [...new Set([...existingProviders, ...autoProviders])];
     }
