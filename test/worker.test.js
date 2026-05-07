@@ -77,6 +77,29 @@ describe('Worker', () => {
         expect(text).toContain('proxies:');
     });
 
+    it('GET /clash rejects empty url-test proxy groups with a diagnostic error', async () => {
+        const app = createTestApp();
+        const config = `
+proxies:
+  - name: Node-A
+    type: ss
+    server: a.example.com
+    port: 443
+    cipher: aes-128-gcm
+    password: test
+proxy-groups:
+  - name: Empty Test Group
+    type: url-test
+    proxies: []
+`;
+        const res = await app.request(`http://localhost/clash?config=${encodeURIComponent(config)}`);
+
+        expect(res.status).toBe(400);
+        const text = await res.text();
+        expect(text).toContain('Empty Test Group');
+        expect(text).toContain('url-test');
+    });
+
     it('GET /shorten-v2 returns JSON with code on success', async () => {
         const app = createTestApp();
         const url = 'http://example.com';

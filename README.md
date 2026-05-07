@@ -153,6 +153,17 @@ The Fall Back selector's default member (what unmatched traffic uses until the u
 
 ## 🗒️ Changelog
 
+### v2.10.1
+
+Sync six bug fixes from upstream `7Sageer/sublink-worker`. None of these affect the existing Snell support added in v2.10.0.
+
+- **Restore full proxy choices in Custom Rule selectors** (#371). Custom Rule groups (e.g. "YouTube → MyProxy") now include individual nodes alongside the existing Node Select / Auto Select / Manual Switch / DIRECT chain — previously the node list was missing, so users could only route through aggregate selectors.
+- **Preserve subscription-userinfo on `/xray`** (#362, #382). The xray endpoint now passes the upstream `subscription-userinfo` HTTP header through to the client, matching the existing behaviour of `/singbox` / `/clash` / `/surge`. Surge / Stash / Loon clients in xray mode now show traffic and expiry information again.
+- **Better remote subscription decoding**. `decodeContent` no longer base64-decodes payloads that are already plain Surge / Clash / Sing-Box config or `ss://`/`vmess://`/etc. share-link lists, avoiding garbled output. Surge config text is now recognized in `detectFormat`.
+- **Reject empty Clash proxy groups** (#378). User-supplied `url-test` / `fallback` groups with empty `proxies: []` and no `use:` references now produce a 400 error with the offending group name, instead of being silently filled with all available nodes.
+- **Sing-Box 1.11+ schema** (#380). Removed the legacy `{type:'block', tag:'REJECT'}` special outbound and the deprecated `independent_cache` field from the base Sing-Box config. Ad Block rules now emit `action: reject` route actions (1.11+ idiom) rather than routing to a REJECT outbound. Selector groups in sing-box no longer include `REJECT`. A new sanitization pass strips legacy `block` / `dns` outbound references from user-uploaded base configs.
+- **Stable auto-provider names** (#379). Provider auto-tags are now `_auto_provider_<base36 hash>` derived deterministically from the source URL (FNV-1a 32-bit), instead of `_auto_provider_1` / `_2` indexes that shifted on every build. Duplicate URLs are deduplicated; hash collisions get `_2` / `_3` suffixes. Affects both Clash `proxy-providers` and Sing-Box `outbound_providers`. Cached providers will be re-downloaded once after the upgrade.
+
 ### v2.10.0
 
 - **Snell protocol support.** Parses Snell nodes from Surge config blocks, Clash YAML (`type: snell` with `obfs-opts`), and a new tool-internal `snell://` share-link form (`snell://<psk>@<host>:<port>?version=&obfs=&obfs-host=&tfo=&reuse=&udp=#name`). Outputs natively to Surge and Clash (Mihomo); Sing-Box has no native Snell outbound, so Snell nodes are dropped with a console warning and excluded from selector groups. The `snell://` URL is *not* a community standard — URLs from other tools (Surgio, etc.) follow different conventions and are not guaranteed to round-trip.

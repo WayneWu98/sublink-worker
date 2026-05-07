@@ -153,6 +153,17 @@ Sing-Box · Clash · Xray/V2Ray · Surge
 
 ## 🗒️ 更新日志
 
+### v2.10.1
+
+同步上游 `7Sageer/sublink-worker` 的六项 bug 修复,均不影响 v2.10.0 引入的 Snell 支持。
+
+- **自定义规则选择器恢复完整节点列表**(#371)。自定义规则的策略组(如"YouTube → 我的节点")现在会列出单个节点,而不只是 Node Select / Auto Select / 手动切换 / DIRECT 这几条聚合项。此前节点列表缺失,用户只能通过聚合选择器路由。
+- **`/xray` 端点保留 subscription-userinfo**(#362、#382)。xray 端点现在会把上游订阅返回的 `subscription-userinfo` HTTP 头透传给客户端,与 `/singbox` `/clash` `/surge` 行为一致。Surge / Stash / Loon 等客户端在 xray 模式下重新可见流量与到期信息。
+- **更稳的远程订阅解码**。当订阅响应已经是明文 Surge / Clash / Sing-Box 配置或 `ss://` / `vmess://` 等分享链接时,`decodeContent` 不再无条件 base64 解码,避免产生乱码。`detectFormat` 同时增加对 Surge 文本的识别。
+- **拒绝空 Clash 代理组**(#378)。用户提供的 `url-test` / `fallback` 组若 `proxies: []` 且没有 `use:` 引用,现在会返回 400 并指明出错组名,而不是静默用全部节点填充。
+- **Sing-Box 1.11+ schema**(#380)。移除基础配置里的旧式 `{type:'block', tag:'REJECT'}` 特殊出站与已废弃的 `independent_cache` 字段。Ad Block 规则改用 1.11+ 的 `action: reject` route action,而非路由到 REJECT 出站。sing-box 的策略组不再含 `REJECT`。新增清扫步骤会移除用户上传的 base config 里残留的 `block` / `dns` 出站引用。
+- **稳定的自动 provider 名**(#379)。auto-provider 标签改为基于源 URL FNV-1a 32-bit 哈希的 `_auto_provider_<base36>`,不再是每次构建都会变的 `_auto_provider_1` / `_2` 索引。重复 URL 自动去重,哈希冲突用 `_2` / `_3` 后缀避让。Clash `proxy-providers` 与 Sing-Box `outbound_providers` 同步生效。升级后客户端会重新拉取一次 provider 缓存。
+
 ### v2.10.0
 
 - **新增 Snell 协议支持。** 可识别 Surge 配置段、Clash YAML（`type: snell`，含 `obfs-opts`）以及本工具自定义的 `snell://` 分享链接形式（`snell://<psk>@<host>:<port>?version=&obfs=&obfs-host=&tfo=&reuse=&udp=#name`）。输出端 Surge 与 Clash（Mihomo）原生支持；Sing-Box 无原生 Snell 出站，遇到 Snell 节点时会跳过并在控制台输出警告，不进入策略组。`snell://` 链接为本工具自定义格式，**非社区标准** —— 来自其他工具（Surgio 等）的 `snell://` URL 各家约定不同,不保证可直接解析。

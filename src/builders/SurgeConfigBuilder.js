@@ -3,7 +3,7 @@ import { groupProxiesByCountry } from '../utils.js';
 import { SURGE_CONFIG, SURGE_SITE_RULE_SET_BASEURL, SURGE_IP_RULE_SET_BASEURL, generateRules, getOutbounds, PREDEFINED_RULE_SETS, DIRECT_DEFAULT_RULES } from '../config/index.js';
 import { resolveCustomRuleSetUrl } from '../config/ruleGenerators.js';
 import { addProxyWithDedup } from './helpers/proxyHelpers.js';
-import { buildSelectorMembers, buildNodeSelectMembers, uniqueNames } from './helpers/groupBuilder.js';
+import { buildSelectorMembers, buildNodeSelectMembers, buildCustomRuleMembers, uniqueNames } from './helpers/groupBuilder.js';
 
 export class SurgeConfigBuilder extends BaseConfigBuilder {
     constructor(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry, includeAutoSelect = true, customRuleSets = [], fallbackOutbound = 'Node Select') {
@@ -326,16 +326,12 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
                 // Skip built-in outbound names to avoid shadowing them with a same-named group.
                 if (RESERVED_OUTBOUNDS.has(String(rule.name || '').toUpperCase())) return;
                 if (this.hasProxyGroup(rule.name)) return;
-                // Custom rules should not include country groups as direct options
-                // to prevent them from acting as global proxies.
-                // Custom rules should route through: Node Select -> Country Groups
-                const options = [
-                    this.t('outboundNames.Node Select'),
-                    ...(this.includeAutoSelect ? [this.t('outboundNames.Auto Select')] : []),
-                    ...(this.manualGroupName ? [this.manualGroupName] : []),
-                    'DIRECT',
-                    'REJECT'
-                ];
+                const options = buildCustomRuleMembers({
+                    proxyList,
+                    translator: this.t,
+                    manualGroupName: this.manualGroupName,
+                    includeAutoSelect: this.includeAutoSelect
+                });
                 this.config['proxy-groups'].push(
                     this.createProxyGroup(rule.name, 'select', options)
                 );
