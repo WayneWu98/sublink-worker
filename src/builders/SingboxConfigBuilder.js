@@ -92,6 +92,11 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
     }
 
     convertProxy(proxy) {
+        if (proxy && proxy.type === 'snell') {
+            console.warn(`Snell is not supported by Sing-Box; dropping node "${proxy.tag}"`);
+            return null;
+        }
+
         // Create a shallow copy to avoid mutating the original
         const sanitized = { ...proxy };
 
