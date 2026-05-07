@@ -115,6 +115,11 @@ export const CustomRules = (props) => {
                             <option x-bind:value="n" x-text="n"></option>
                         </template>
                     </optgroup>
+                    <optgroup label={t('outboundSurgeDevices')} x-show="surgeDeviceNames().length > 0">
+                        <template x-for="n in surgeDeviceNames()" x-bind:key="n">
+                            <option x-bind:value="'DEVICE:' + n" x-text="'DEVICE:' + n"></option>
+                        </template>
+                    </optgroup>
                 </select>
             </div>
 
@@ -315,6 +320,15 @@ export const CustomRules = (props) => {
           } catch { return []; }
         }
 
+        function readSiblingSurgeDevices() {
+          const el = document.querySelector('input[name="surgeDevices"]');
+          if (!el || !el.value) return [];
+          try {
+            const parsed = JSON.parse(el.value);
+            return Array.isArray(parsed) ? parsed : [];
+          } catch { return []; }
+        }
+
         function customRulesData() {
           return {
             mode: 'form',
@@ -324,11 +338,18 @@ export const CustomRules = (props) => {
             jsonValid: false,
             // Bumped whenever sibling customRuleSets changes so the dropdown re-renders
             ruleSetsVersion: 0,
+            surgeDevicesVersion: 0,
 
             customRuleSetNames() {
               // Reference this.ruleSetsVersion so Alpine treats this as reactive
               void this.ruleSetsVersion;
               const names = readSiblingCustomRuleSets().map(r => r && r.name).filter(Boolean);
+              return Array.from(new Set(names));
+            },
+
+            surgeDeviceNames() {
+              void this.surgeDevicesVersion;
+              const names = readSiblingSurgeDevices().map(d => d && d.name).filter(Boolean);
               return Array.from(new Set(names));
             },
 
@@ -338,6 +359,10 @@ export const CustomRules = (props) => {
               const sel = readFormSelectedRules();
               if (sel.includes(value)) return true;
               if (this.customRuleSetNames().includes(value)) return true;
+              if (typeof value === 'string' && value.startsWith('DEVICE:')) {
+                const name = value.slice(7);
+                if (this.surgeDeviceNames().includes(name)) return true;
+              }
               return false;
             },
 
@@ -387,6 +412,10 @@ export const CustomRules = (props) => {
               window.addEventListener('selected-rules-changed', () => this.validateOutbounds());
               window.addEventListener('custom-rulesets-changed', () => {
                 this.ruleSetsVersion++;
+                this.validateOutbounds();
+              });
+              window.addEventListener('surge-devices-changed', () => {
+                this.surgeDevicesVersion++;
                 this.validateOutbounds();
               });
             },

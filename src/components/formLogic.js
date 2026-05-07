@@ -234,6 +234,15 @@ export const formLogicFn = (t) => {
                     }
                 } catch { }
 
+                // Include surgeDevices when available
+                try {
+                    const surgeDevicesInput = document.querySelector('input[name="surgeDevices"]');
+                    const surgeDevices = surgeDevicesInput && surgeDevicesInput.value ? JSON.parse(surgeDevicesInput.value) : [];
+                    if (Array.isArray(surgeDevices) && surgeDevices.length > 0) {
+                        params.append('surgeDevices', JSON.stringify(surgeDevices));
+                    }
+                } catch { }
+
                 if (!this.includeAutoSelect) {
                     params.append('include_auto_select', 'false');
                 }
@@ -590,7 +599,39 @@ export const formLogicFn = (t) => {
                     }
                 }
 
-                // Extract customRules
+                // Extract surgeDevices first — declarations must land in the DOM before
+                // any consumer's validateOutbounds() runs, otherwise DEVICE:xxx values
+                // would be silently rejected and reset to Node Select.
+                const surgeDevices = params.get('surgeDevices');
+                if (surgeDevices) {
+                    try {
+                        const parsed = JSON.parse(surgeDevices);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            window.dispatchEvent(new CustomEvent('restore-surge-devices', {
+                                detail: { devices: parsed }
+                            }));
+                        }
+                    } catch (e) {
+                        console.warn('Failed to parse surgeDevices:', e);
+                    }
+                }
+
+                // Extract customRuleSets (after surgeDevices so its outbound dropdown sees devices)
+                const customRuleSets = params.get('customRuleSets');
+                if (customRuleSets) {
+                    try {
+                        const parsed = JSON.parse(customRuleSets);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            window.dispatchEvent(new CustomEvent('restore-custom-rule-sets', {
+                                detail: { rules: parsed }
+                            }));
+                        }
+                    } catch (e) {
+                        console.warn('Failed to parse customRuleSets:', e);
+                    }
+                }
+
+                // Extract customRules (last so it can reference both surgeDevices and customRuleSets)
                 const customRules = params.get('customRules');
                 if (customRules) {
                     try {
@@ -603,21 +644,6 @@ export const formLogicFn = (t) => {
                         }
                     } catch (e) {
                         console.warn('Failed to parse customRules:', e);
-                    }
-                }
-
-                // Extract customRuleSets
-                const customRuleSets = params.get('customRuleSets');
-                if (customRuleSets) {
-                    try {
-                        const parsed = JSON.parse(customRuleSets);
-                        if (Array.isArray(parsed) && parsed.length > 0) {
-                            window.dispatchEvent(new CustomEvent('restore-custom-rule-sets', {
-                                detail: { rules: parsed }
-                            }));
-                        }
-                    } catch (e) {
-                        console.warn('Failed to parse customRuleSets:', e);
                     }
                 }
 

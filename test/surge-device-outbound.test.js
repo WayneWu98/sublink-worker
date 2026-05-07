@@ -1,0 +1,208 @@
+import { describe, it, expect } from 'vitest';
+import { isDeviceOutbound } from '../src/builders/BaseConfigBuilder.js';
+
+describe('isDeviceOutbound', () => {
+    it('returns true for "DEVICE:tower"', () => {
+        expect(isDeviceOutbound('DEVICE:tower')).toBe(true);
+    });
+
+    it('returns true for "DEVICE:my-iphone"', () => {
+        expect(isDeviceOutbound('DEVICE:my-iphone')).toBe(true);
+    });
+
+    it('returns false for "Node Select"', () => {
+        expect(isDeviceOutbound('Node Select')).toBe(false);
+    });
+
+    it('returns false for "DIRECT"', () => {
+        expect(isDeviceOutbound('DIRECT')).toBe(false);
+    });
+
+    it('returns false for the empty string', () => {
+        expect(isDeviceOutbound('')).toBe(false);
+    });
+
+    it('returns false for null/undefined/non-string input', () => {
+        expect(isDeviceOutbound(null)).toBe(false);
+        expect(isDeviceOutbound(undefined)).toBe(false);
+        expect(isDeviceOutbound(42)).toBe(false);
+        expect(isDeviceOutbound({})).toBe(false);
+    });
+
+    it('is case-sensitive (does not match "device:tower")', () => {
+        expect(isDeviceOutbound('device:tower')).toBe(false);
+    });
+});
+
+import { SurgeConfigBuilder } from '../src/builders/SurgeConfigBuilder.js';
+
+const SAMPLE = 'ss://YWVzLTI1Ni1nY206dGVzdA@1.2.3.4:8388#Node1';
+
+describe('SurgeConfigBuilder — DEVICE outbound on custom rules', () => {
+    it('emits DOMAIN-SUFFIX,...,DEVICE:my-iphone verbatim', async () => {
+        const customRules = [
+            { name: 'DEVICE:my-iphone', domain_suffix: 'work.example.com' }
+        ];
+        const builder = new SurgeConfigBuilder(
+            SAMPLE, ['Non-China'], customRules, null, 'en', '', false, true, []
+        );
+        const text = await builder.build();
+        expect(text).toContain('DOMAIN-SUFFIX,work.example.com,DEVICE:my-iphone');
+    });
+
+    it('does not create a "DEVICE:my-iphone" proxy group', async () => {
+        const customRules = [
+            { name: 'DEVICE:my-iphone', domain_suffix: 'work.example.com' }
+        ];
+        const builder = new SurgeConfigBuilder(
+            SAMPLE, ['Non-China'], customRules, null, 'en', '', false, true, []
+        );
+        const text = await builder.build();
+        const proxyGroupSection = text.split('[Proxy Group]')[1].split('[Rule]')[0];
+        expect(proxyGroupSection).not.toContain('DEVICE:my-iphone =');
+    });
+
+    it('does not call t() on DEVICE outbound (no translation prefix leakage)', async () => {
+        const customRules = [
+            { name: 'DEVICE:tower', domain: 'foo.com' }
+        ];
+        const builder = new SurgeConfigBuilder(
+            SAMPLE, ['Non-China'], customRules, null, 'en', '', false, true, []
+        );
+        const text = await builder.build();
+        expect(text).toContain('DOMAIN,foo.com,DEVICE:tower');
+        expect(text).not.toContain('outboundNames.DEVICE');
+    });
+});
+
+describe('SurgeConfigBuilder — DEVICE outbound on custom rule sets', () => {
+    it('emits RULE-SET pointing at DEVICE:tower instead of a wrapper group', async () => {
+        const customRuleSets = [
+            { name: 'MyDev', provider: 'metacubex', file: 'reddit', type: 'site', outbound: 'DEVICE:tower' }
+        ];
+        const builder = new SurgeConfigBuilder(
+            SAMPLE, ['Non-China'], [], null, 'en', '', false, true, customRuleSets
+        );
+        const text = await builder.build();
+        expect(text).toMatch(/RULE-SET,.*\/geosite\/reddit\.conf,DEVICE:tower/);
+        const proxyGroupSection = text.split('[Proxy Group]')[1].split('[Rule]')[0];
+        expect(proxyGroupSection).not.toContain('MyDev =');
+        expect(text).not.toMatch(/RULE-SET,.*reddit\.conf,MyDev/);
+    });
+
+    it('preserves no-resolve suffix for ip-type rule sets with DEVICE outbound', async () => {
+        const customRuleSets = [
+            { name: 'IpDev', provider: 'metacubex', file: 'cn', type: 'ip', outbound: 'DEVICE:tower' }
+        ];
+        const builder = new SurgeConfigBuilder(
+            SAMPLE, ['Non-China'], [], null, 'en', '', false, true, customRuleSets
+        );
+        const text = await builder.build();
+        expect(text).toMatch(/RULE-SET,.*,DEVICE:tower,no-resolve/);
+    });
+});
+
+import { ClashConfigBuilder } from '../src/builders/ClashConfigBuilder.js';
+import yaml from 'js-yaml';
+
+describe('ClashConfigBuilder — DEVICE outbound is dropped', () => {
+    it('drops customRules with DEVICE name from YAML rules', async () => {
+        const customRules = [
+            { name: 'DEVICE:my-iphone', domain_suffix: 'work.example.com' }
+        ];
+        const builder = new ClashConfigBuilder(
+            SAMPLE, ['Non-China'], customRules, null, 'en', '', false, false, '', '', true, []
+        );
+        const text = await builder.build();
+        expect(text).not.toContain('DEVICE:my-iphone');
+        expect(text).not.toContain('work.example.com');
+    });
+
+    it('drops customRuleSets with DEVICE outbound — no group, no provider, no rule line', async () => {
+        const customRuleSets = [
+            { name: 'MyDev', provider: 'metacubex', file: 'reddit', type: 'site', outbound: 'DEVICE:tower' }
+        ];
+        const builder = new ClashConfigBuilder(
+            SAMPLE, ['Non-China'], [], null, 'en', '', false, false, '', '', true, customRuleSets
+        );
+        const text = await builder.build();
+        const config = yaml.load(text);
+        expect((config['proxy-groups'] || []).find(g => g.name === 'MyDev')).toBeUndefined();
+        expect((config['rule-providers'] || {})['MyDev']).toBeUndefined();
+        expect(JSON.stringify(config.rules)).not.toContain('MyDev');
+        expect(JSON.stringify(config.rules)).not.toContain('DEVICE:tower');
+    });
+
+    it('keeps non-DEVICE customRuleSets alongside DEVICE ones', async () => {
+        const customRuleSets = [
+            { name: 'MyDev',    provider: 'metacubex', file: 'reddit',  type: 'site', outbound: 'DEVICE:tower' },
+            { name: 'MyReddit', provider: 'metacubex', file: 'reddit',  type: 'site', outbound: 'Node Select' }
+        ];
+        const builder = new ClashConfigBuilder(
+            SAMPLE, ['Non-China'], [], null, 'en', '', false, false, '', '', true, customRuleSets
+        );
+        const text = await builder.build();
+        const config = yaml.load(text);
+        expect((config['rule-providers'] || {})['MyReddit']).toBeDefined();
+        expect((config['rule-providers'] || {})['MyDev']).toBeUndefined();
+    });
+});
+
+import { SingboxConfigBuilder } from '../src/builders/SingboxConfigBuilder.js';
+
+describe('SingboxConfigBuilder — DEVICE outbound is dropped', () => {
+    it('drops customRules with DEVICE name from route.rules', async () => {
+        const customRules = [
+            { name: 'DEVICE:my-iphone', domain_suffix: 'work.example.com' }
+        ];
+        const builder = new SingboxConfigBuilder(
+            SAMPLE, ['Non-China'], customRules, null, 'en', '', false, false, '', '', '1.12', true, []
+        );
+        const config = await builder.build();
+        const allRulesJson = JSON.stringify(config.route?.rules || []);
+        expect(allRulesJson).not.toContain('DEVICE:my-iphone');
+        expect(allRulesJson).not.toContain('work.example.com');
+    });
+
+    it('drops customRuleSets with DEVICE outbound — no rule_set tag, no selector, no rule', async () => {
+        const customRuleSets = [
+            { name: 'MyDev', provider: 'metacubex', file: 'reddit', type: 'site', outbound: 'DEVICE:tower' }
+        ];
+        const builder = new SingboxConfigBuilder(
+            SAMPLE, ['Non-China'], [], null, 'en', '', false, false, '', '', '1.12', true, customRuleSets
+        );
+        const config = await builder.build();
+        const ruleSetTags = (config.route?.rule_set || []).map(r => r.tag);
+        expect(ruleSetTags).not.toContain('MyDev');
+        const selectorTags = (config.outbounds || []).map(o => o.tag);
+        expect(selectorTags).not.toContain('MyDev');
+        expect(JSON.stringify(config.route?.rules || [])).not.toContain('MyDev');
+    });
+});
+
+describe('end-to-end DEVICE wiring', () => {
+    it('Surge config with both DEVICE custom rule and DEVICE custom rule set is well-formed', async () => {
+        const customRules = [{ name: 'DEVICE:my-iphone', domain_suffix: 'work.com' }];
+        const customRuleSets = [
+            { name: 'MyDev',    provider: 'metacubex', file: 'reddit', type: 'site', outbound: 'DEVICE:tower' },
+            { name: 'MyReddit', provider: 'metacubex', file: 'reddit', type: 'site', outbound: 'Node Select' }
+        ];
+        const builder = new SurgeConfigBuilder(
+            SAMPLE, ['Non-China'], customRules, null, 'en', '', false, true, customRuleSets
+        );
+        const text = await builder.build();
+
+        // DEVICE custom rule emitted with passthrough policy
+        expect(text).toContain('DOMAIN-SUFFIX,work.com,DEVICE:my-iphone');
+        // DEVICE custom rule set emitted with DEVICE policy
+        expect(text).toMatch(/RULE-SET,.*reddit\.conf,DEVICE:tower/);
+        // Non-DEVICE custom rule set still uses its name
+        expect(text).toMatch(/RULE-SET,.*reddit\.conf,MyReddit/);
+        // No wrapper proxy group for either DEVICE entity
+        const proxyGroupSection = text.split('[Proxy Group]')[1].split('[Rule]')[0];
+        expect(proxyGroupSection).not.toContain('DEVICE:my-iphone =');
+        expect(proxyGroupSection).not.toContain('MyDev =');
+        // Non-DEVICE wrapper still present
+        expect(proxyGroupSection).toContain('MyReddit =');
+    });
+});

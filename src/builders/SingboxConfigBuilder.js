@@ -1,6 +1,6 @@
 
 import { SING_BOX_CONFIG, generateRuleSets, generateRules, getOutbounds, PREDEFINED_RULE_SETS, DIRECT_DEFAULT_RULES, REJECT_ACTION_RULES } from '../config/index.js';
-import { BaseConfigBuilder, RESERVED_OUTBOUNDS } from './BaseConfigBuilder.js';
+import { BaseConfigBuilder, RESERVED_OUTBOUNDS, isDeviceOutbound } from './BaseConfigBuilder.js';
 import { deepCopy, groupProxiesByCountry } from '../utils.js';
 import { addProxyWithDedup } from './helpers/proxyHelpers.js';
 import { buildSelectorMembers as buildSelectorMemberList, buildNodeSelectMembers, buildCustomRuleMembers, uniqueNames } from './helpers/groupBuilder.js';
@@ -246,6 +246,7 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
             this.customRules.forEach(rule => {
                 // Skip built-in outbound names to avoid shadowing them with a same-named group.
                 if (RESERVED_OUTBOUNDS.has(String(rule.name || '').toUpperCase())) return;
+                if (isDeviceOutbound(rule.name)) return;
                 const includeAutoSelect = this.includeAutoSelect && this.hasAutoSelectCandidates(proxyList);
                 const selectorMembers = buildCustomRuleMembers({
                     proxyList,
@@ -270,6 +271,7 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
             const name = (item.name && item.name.trim()) || (item.file && item.file.trim());
             if (!name) return;
             if (RESERVED_OUTBOUNDS.has(name.toUpperCase())) return;
+            if (isDeviceOutbound(item.outbound)) return;
             if (this.hasOutboundTag(name)) return;
             const members = this.buildSelectorMembers(proxyList);
             const def = this.resolveCustomRuleSetDefault(item);
@@ -529,8 +531,10 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
     }
 
     formatConfig() {
-        const rules = generateRules(this.selectedRules, this.customRules, this.customRuleSets);
-        const { site_rule_sets, ip_rule_sets } = generateRuleSets(this.selectedRules, this.customRules, this.customRuleSets);
+        const effectiveCustomRules = (this.customRules || []).filter(r => !isDeviceOutbound(r?.name));
+        const effectiveCustomRuleSets = (this.customRuleSets || []).filter(r => !isDeviceOutbound(r?.outbound));
+        const rules = generateRules(this.selectedRules, effectiveCustomRules, effectiveCustomRuleSets);
+        const { site_rule_sets, ip_rule_sets } = generateRuleSets(this.selectedRules, effectiveCustomRules, effectiveCustomRuleSets);
 
         this.config.route.rule_set = [...site_rule_sets, ...ip_rule_sets];
 

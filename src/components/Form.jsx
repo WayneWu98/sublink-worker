@@ -3,6 +3,7 @@
 import { PREDEFINED_RULE_SETS, UNIFIED_RULES } from '../config/index.js';
 import { CustomRules } from './CustomRules.jsx';
 import { CustomRuleSets } from './CustomRuleSets.jsx';
+import { SurgeDevices } from './SurgeDevices.jsx';
 import { TextareaWithActions } from './TextareaWithActions.jsx';
 import { ValidatedTextarea } from './ValidatedTextarea.jsx';
 import { formLogicFn } from './formLogic.js';
@@ -225,6 +226,9 @@ export const Form = (props) => {
   </div>
 
           </div>
+
+  {/* Surge Devices Component */ }
+  <SurgeDevices t={t} />
 
   {/* Custom RuleSets Component */ }
   <CustomRuleSets t={t} />

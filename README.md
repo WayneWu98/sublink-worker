@@ -153,6 +153,10 @@ The Fall Back selector's default member (what unmatched traffic uses until the u
 
 ## 🗒️ Changelog
 
+### v2.10.2
+
+- **Surge `DEVICE:device_name` outbound for custom rules and rule sets.** A new "Surge Devices" section lets you declare Ponte device names (e.g. `tower`, `my-iphone`); declared names then appear as `DEVICE:<name>` options in the Custom Rules and Custom Rule Sets outbound dropdowns. In the Surge config, the `DEVICE:` policy is emitted verbatim — no wrapper proxy group — so traffic routes directly to the named device (`DOMAIN-SUFFIX,work.com,DEVICE:my-iphone` and `RULE-SET,<url>,DEVICE:tower`). Clash and Sing-Box have no equivalent; rules and rule sets with a `DEVICE:` outbound are silently dropped from those configs (no wrapper group, no rule-provider, no orphan rule-set declaration). The device list is persisted in the subconverter URL alongside `customRules` and `customRuleSets`, restored before either of those so cross-references survive a round-trip.
+
 ### v2.10.1
 
 Sync six bug fixes from upstream `7Sageer/sublink-worker`. None of these affect the existing Snell support added in v2.10.0.

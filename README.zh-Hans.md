@@ -153,6 +153,10 @@ Sing-Box · Clash · Xray/V2Ray · Surge
 
 ## 🗒️ 更新日志
 
+### v2.10.2
+
+- **自定义规则/规则集支持 Surge `DEVICE:device_name` 出站。** 新增「Surge 设备」区域,先声明 Ponte 设备名(如 `tower`、`my-iphone`),声明后会作为 `DEVICE:<名称>` 选项出现在「自定义规则」和「自定义规则集」的出站下拉中。Surge 配置里 `DEVICE:` policy 直通输出,不会生成 wrapper proxy group,流量直接发往设备(`DOMAIN-SUFFIX,work.com,DEVICE:my-iphone` 与 `RULE-SET,<url>,DEVICE:tower`)。Clash / Sing-Box 没有等价语法,带 `DEVICE:` 出站的规则与规则集在这两种格式下静默跳过(不创建 wrapper、不生成 rule-provider、不留 orphan rule-set 声明)。设备列表与 `customRules`、`customRuleSets` 一起持久化在订阅链接里,且解码顺序保证设备先于二者就位,跨引用关系不会因 URL 往返而丢失。
+
 ### v2.10.1
 
 同步上游 `7Sageer/sublink-worker` 的六项 bug 修复,均不影响 v2.10.0 引入的 Snell 支持。
