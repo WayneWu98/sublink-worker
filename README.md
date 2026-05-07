@@ -153,6 +153,11 @@ The Fall Back selector's default member (what unmatched traffic uses until the u
 
 ## 🗒️ Changelog
 
+### v2.10.4
+
+- **Fix: Surge devices were dropped from generated subscription URLs and short codes.** `submitForm()` (the "Generate" button) built its query string independently from the share-link path and forgot to read the `surgeDevices` hidden input. Long `/surge` URLs that the user copied — and any short codes those URLs were folded into via `/shorten-v2` — silently lost the declared device list, so reloading from a short code restored Custom Rules and Custom Rule Sets but never the Surge Devices section. Without those declarations, the next `validateOutbounds()` pass auto-reset every `DEVICE:<name>` outbound to `Node Select`.
+- **UI: align Custom Rule Sets empty state with the other two sections.** The "no rule sets yet" placeholder was missing the round icon container that Custom Rules and Surge Devices use, which made the empty state look unfinished.
+
 ### v2.10.3
 
 - **Preserve `[Host]`, `[URL Rewrite]`, `[Header Rewrite]`, `[MITM]`, `[Script]`, `[SSID Setting]` from a custom Surge base config.** The base-config validator previously rejected any Surge INI that did not contain `[General]` / `[Replica]` / `[Proxy]` / `[Proxy Group]`, so a valid fragment containing only `[Host] *.company.ponte = 127.0.0.1` failed validation. Even when accepted, those sections were silently dropped from the emitted config because the builder only ever produced the five generated sections. Now the parser recognizes the six common passthrough sections, stores each as a raw-line array, and the validator accepts any input with at least one recognized section (a `[Rule]`-only fragment also parses now). On emission, every non-empty passthrough section is appended verbatim in canonical Surge order after `[Rule]`. Lines round-trip exactly as written; comments and blank lines are stripped (existing INI parser behavior). The JSON-format Surge base config path now applies the same recognized-section check, so `{}` / `null` / arrays / objects with only unrelated keys are rejected up-front instead of silently passing validation and breaking later.

@@ -153,6 +153,11 @@ Sing-Box · Clash · Xray/V2Ray · Surge
 
 ## 🗒️ 更新日志
 
+### v2.10.4
+
+- **修复:Surge 设备不会进入生成的订阅 URL 和短码。** `submitForm()`(也就是「生成订阅」按钮)的 query string 构造逻辑与分享链接是两条独立路径,这条路径没有读取 `surgeDevices` 隐藏输入。结果用户复制走的长 `/surge` URL —— 以及通过 `/shorten-v2` 折成的短码 —— 都不带声明的设备列表,所以从短码加载回来时只恢复了「自定义规则」和「自定义规则集」,「Surge 设备」区域永远是空的。而声明缺失的话,下一轮 `validateOutbounds()` 会把所有 `DEVICE:<名称>` 类型的出站重置成 `Node Select`。
+- **UI:自定义规则集空态对齐另外两个区域。** 「暂无自定义规则集」占位缺少另两处用的圆形图标容器,看起来像没做完。
+
 ### v2.10.3
 
 - **保留自定义 Surge 基础配置中的 `[Host]`、`[URL Rewrite]`、`[Header Rewrite]`、`[MITM]`、`[Script]`、`[SSID Setting]` 段。** 之前的基础配置校验器要求 Surge INI 必须含有 `[General]` / `[Replica]` / `[Proxy]` / `[Proxy Group]` 之一,因此仅有 `[Host] *.company.ponte = 127.0.0.1` 这种合法片段会被判定非法。即便侥幸通过,这些段在生成配置时也会被静默丢弃 —— Surge 构建器只输出 5 个自动生成的段。现在解析器识别这六个常见的 passthrough 段,每段以 raw line 数组存放;校验器接受任何含有至少一个已识别段的输入(只含 `[Rule]` 的片段也能通过)。生成时每个非空 passthrough 段在 `[Rule]` 之后按 Surge 的标准顺序追加,内容原样回写。行与原输入完全一致;注释和空行会按现有 INI 解析器行为剥离。JSON 格式的 Surge 基础配置路径同样应用了"至少一个已识别段"的校验,`{}` / `null` / 数组 / 全是无关键的对象会在校验阶段直接报错,不再放行后才在下游悄悄出问题。
