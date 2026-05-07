@@ -179,3 +179,30 @@ describe('SingboxConfigBuilder — DEVICE outbound is dropped', () => {
         expect(JSON.stringify(config.route?.rules || [])).not.toContain('MyDev');
     });
 });
+
+describe('end-to-end DEVICE wiring', () => {
+    it('Surge config with both DEVICE custom rule and DEVICE custom rule set is well-formed', async () => {
+        const customRules = [{ name: 'DEVICE:my-iphone', domain_suffix: 'work.com' }];
+        const customRuleSets = [
+            { name: 'MyDev',    provider: 'metacubex', file: 'reddit', type: 'site', outbound: 'DEVICE:tower' },
+            { name: 'MyReddit', provider: 'metacubex', file: 'reddit', type: 'site', outbound: 'Node Select' }
+        ];
+        const builder = new SurgeConfigBuilder(
+            SAMPLE, ['Non-China'], customRules, null, 'en', '', false, true, customRuleSets
+        );
+        const text = await builder.build();
+
+        // DEVICE custom rule emitted with passthrough policy
+        expect(text).toContain('DOMAIN-SUFFIX,work.com,DEVICE:my-iphone');
+        // DEVICE custom rule set emitted with DEVICE policy
+        expect(text).toMatch(/RULE-SET,.*reddit\.conf,DEVICE:tower/);
+        // Non-DEVICE custom rule set still uses its name
+        expect(text).toMatch(/RULE-SET,.*reddit\.conf,MyReddit/);
+        // No wrapper proxy group for either DEVICE entity
+        const proxyGroupSection = text.split('[Proxy Group]')[1].split('[Rule]')[0];
+        expect(proxyGroupSection).not.toContain('DEVICE:my-iphone =');
+        expect(proxyGroupSection).not.toContain('MyDev =');
+        // Non-DEVICE wrapper still present
+        expect(proxyGroupSection).toContain('MyReddit =');
+    });
+});
