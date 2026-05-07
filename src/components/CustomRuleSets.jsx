@@ -41,8 +41,11 @@ export const CustomRuleSets = (props) => {
             <div x-show="mode === 'form'" {...{'x-transition:enter': 'transition ease-out duration-300', 'x-transition:enter-start': 'opacity-0 transform scale-95', 'x-transition:enter-end': 'opacity-100 transform scale-100'}}>
                 <template x-if="rules.length === 0">
                     <div class="text-center py-12 bg-gray-50 dark:bg-gray-700/30 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700">
+                        <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
+                            <i class="fas fa-plus text-2xl"></i>
+                        </div>
                         <p class="text-gray-500 dark:text-gray-400 mb-4">{t('noCustomRuleSetsForm')}</p>
-                        <button type="button" x-on:click="addRule()" class="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg">
+                        <button type="button" x-on:click="addRule()" class="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors duration-200 font-medium">
                             {t('addCustomRuleSet')}
                         </button>
                     </div>
