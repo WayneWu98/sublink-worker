@@ -153,6 +153,12 @@ Sing-Box · Clash · Xray/V2Ray · Surge
 
 ## 🗒️ 更新日志
 
+### v2.10.3
+
+- **保留自定义 Surge 基础配置中的 `[Host]`、`[URL Rewrite]`、`[Header Rewrite]`、`[MITM]`、`[Script]`、`[SSID Setting]` 段。** 之前的基础配置校验器要求 Surge INI 必须含有 `[General]` / `[Replica]` / `[Proxy]` / `[Proxy Group]` 之一,因此仅有 `[Host] *.company.ponte = 127.0.0.1` 这种合法片段会被判定非法。即便侥幸通过,这些段在生成配置时也会被静默丢弃 —— Surge 构建器只输出 5 个自动生成的段。现在解析器识别这六个常见的 passthrough 段,每段以 raw line 数组存放;校验器接受任何含有至少一个已识别段的输入(只含 `[Rule]` 的片段也能通过)。生成时每个非空 passthrough 段在 `[Rule]` 之后按 Surge 的标准顺序追加,内容原样回写。行与原输入完全一致;注释和空行会按现有 INI 解析器行为剥离。JSON 格式的 Surge 基础配置路径同样应用了"至少一个已识别段"的校验,`{}` / `null` / 数组 / 全是无关键的对象会在校验阶段直接报错,不再放行后才在下游悄悄出问题。
+- **修复内存 KV 下保存的配置秒删问题。** `MemoryKVAdapter.scheduleExpiration` 直接调用 `setTimeout(fn, ttlMs)`,而 Node.js 在 `ttlMs >= 2^31`(~24.85 天)时会静默降级到 1 ms。默认 `configTtlSeconds` 是 30 天,所以每一次 `POST /config` 存进去的配置都在下个 event-loop tick 就被删了 —— 后续 `/surge?configId=…` 拿到 `null`,静默落回默认基础配置。改用 put 时记录绝对到期时间戳、get 时懒检查的方案。任何用 node-server / Vercel 构建且没接 Redis 的部署都受影响;Cloudflare Workers / Upstash / Redis 后端的部署不受影响。
+- **三个表单的动画对齐。** Surge 设备、自定义规则集、自定义规则三处的添加/删除/清空动画统一,表单/JSON 模式切换的 fade-scale 过渡也统一。原本 Surge 设备没有任何动画;自定义规则集有单卡片动画但缺模式切换过渡。
+
 ### v2.10.2
 
 - **自定义规则/规则集支持 Surge `DEVICE:device_name` 出站。** 新增「Surge 设备」区域,先声明 Ponte 设备名(如 `tower`、`my-iphone`),声明后会作为 `DEVICE:<名称>` 选项出现在「自定义规则」和「自定义规则集」的出站下拉中。Surge 配置里 `DEVICE:` policy 直通输出,不会生成 wrapper proxy group,流量直接发往设备(`DOMAIN-SUFFIX,work.com,DEVICE:my-iphone` 与 `RULE-SET,<url>,DEVICE:tower`)。Clash / Sing-Box 没有等价语法,带 `DEVICE:` 出站的规则与规则集在这两种格式下静默跳过(不创建 wrapper、不生成 rule-provider、不留 orphan rule-set 声明)。设备列表与 `customRules`、`customRuleSets` 一起持久化在订阅链接里,且解码顺序保证设备先于二者就位,跨引用关系不会因 URL 往返而丢失。
