@@ -16,6 +16,13 @@ export const RESERVED_OUTBOUNDS = new Set([
     'PASS',
 ]);
 
+// True iff `value` is a Surge "DEVICE:device_name" policy literal. Used by all
+// three builders to detect Surge-only outbound targets (Ponte routing). Surge
+// emits the literal verbatim; Clash and Sing-box silently drop these rules.
+export function isDeviceOutbound(value) {
+    return typeof value === 'string' && value.startsWith('DEVICE:');
+}
+
 export class BaseConfigBuilder {
     constructor(inputString, baseConfig, lang, userAgent, groupByCountry = false, includeAutoSelect = true) {
         this.inputString = inputString;
