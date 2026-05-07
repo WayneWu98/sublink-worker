@@ -33,7 +33,7 @@ export const SurgeDevices = (props) => {
             </div>
 
             {/* Form Mode */}
-            <div x-show="mode === 'form'">
+            <div x-show="mode === 'form'" {...{'x-transition:enter': 'transition ease-out duration-300', 'x-transition:enter-start': 'opacity-0 transform scale-95', 'x-transition:enter-end': 'opacity-100 transform scale-100'}}>
                 <template x-if="devices.length === 0">
                     <div class="text-center py-12 bg-gray-50 dark:bg-gray-700/30 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700">
                         <div class="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
@@ -48,13 +48,31 @@ export const SurgeDevices = (props) => {
 
                 <div class="space-y-4">
                     <template x-for="(device, index) in devices" x-bind:key="device.__uid || index">
-                        <div class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                        <div
+                            x-data="{ show: false }"
+                            x-init="$nextTick(() => show = true)"
+                            x-show="show"
+                            class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 border border-gray-200 dark:border-gray-700 transition-all duration-200 hover:border-primary-200 dark:hover:border-primary-900/50"
+                            {...{
+                                'x-transition:enter': 'transition ease-out duration-300',
+                                'x-transition:enter-start': 'opacity-0 -translate-y-2 scale-95',
+                                'x-transition:enter-end': 'opacity-100 translate-y-0 scale-100',
+                                'x-transition:leave': 'transition ease-in duration-200',
+                                'x-transition:leave-start': 'opacity-100 translate-y-0 scale-100',
+                                'x-transition:leave-end': 'opacity-0 translate-y-2 scale-95',
+                                'x-on:surge-devices-clear.window': 'show = false'
+                            }}
+                        >
                             <div class="flex justify-between items-center mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
                                 <h3 class="font-medium text-gray-900 dark:text-white flex items-center gap-2">
                                     <span class="w-6 h-6 rounded bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 flex items-center justify-center text-xs" x-text="index + 1"></span>
                                     {t('surgeDevice')}
                                 </h3>
-                                <button type="button" x-on:click="removeDevice(index)" class="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20">
+                                <button
+                                    type="button"
+                                    x-on:click="show = false; setTimeout(() => removeDevice(index), 200)"
+                                    class="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                                >
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
                             </div>
@@ -85,7 +103,7 @@ export const SurgeDevices = (props) => {
             </div>
 
             {/* JSON Mode */}
-            <div x-show="mode === 'json'">
+            <div x-show="mode === 'json'" {...{'x-transition:enter': 'transition ease-out duration-300', 'x-transition:enter-start': 'opacity-0 transform scale-95', 'x-transition:enter-end': 'opacity-100 transform scale-100'}}>
                 <textarea x-model="jsonContent" rows={8} class="w-full px-4 py-2 font-mono text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white" placeholder='[{"name":"tower"}]'></textarea>
                 <template x-if="jsonError">
                     <p class="mt-2 text-sm text-red-500" x-text="jsonError"></p>
@@ -152,8 +170,11 @@ export const SurgeDevices = (props) => {
 
                         clearAll() {
                             if (!confirm('${t('confirmClearAllSurgeDevices')}')) return;
-                            this.devices = [];
-                            this.jsonContent = '[]';
+                            this.$dispatch('surge-devices-clear');
+                            setTimeout(() => {
+                                this.devices = [];
+                                this.jsonContent = '[]';
+                            }, 200);
                         }
                     }
                 }

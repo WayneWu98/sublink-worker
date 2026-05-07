@@ -38,7 +38,7 @@ export const CustomRuleSets = (props) => {
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">{t('customRuleSetsSectionTooltip')}</p>
 
             {/* Form mode */}
-            <div x-show="mode === 'form'">
+            <div x-show="mode === 'form'" {...{'x-transition:enter': 'transition ease-out duration-300', 'x-transition:enter-start': 'opacity-0 transform scale-95', 'x-transition:enter-end': 'opacity-100 transform scale-100'}}>
                 <template x-if="rules.length === 0">
                     <div class="text-center py-12 bg-gray-50 dark:bg-gray-700/30 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700">
                         <p class="text-gray-500 dark:text-gray-400 mb-4">{t('noCustomRuleSetsForm')}</p>
@@ -179,7 +179,7 @@ export const CustomRuleSets = (props) => {
             </div>
 
             {/* JSON mode */}
-            <div x-show="mode === 'json'">
+            <div x-show="mode === 'json'" {...{'x-transition:enter': 'transition ease-out duration-300', 'x-transition:enter-start': 'opacity-0 transform scale-95', 'x-transition:enter-end': 'opacity-100 transform scale-100'}}>
                 <textarea x-model="jsonContent" rows={12} class="w-full px-4 py-2 font-mono text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white" placeholder='[{"name":"MyReddit","provider":"metacubex","file":"reddit","type":"site","outbound":"Node Select"}]'></textarea>
                 <p x-show="jsonError" class="mt-2 text-sm text-red-600 dark:text-red-400" x-text="jsonError"></p>
             </div>
