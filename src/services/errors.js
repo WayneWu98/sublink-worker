@@ -27,3 +27,10 @@ export class TokenMismatchError extends ServiceError {
         this.reason = reason;
     }
 }
+
+export class InvalidConfigError extends ServiceError {
+    constructor(message = 'Invalid config') {
+        super(message, 400);
+        this.name = 'InvalidConfigError';
+    }
+}

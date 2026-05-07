@@ -6,6 +6,7 @@ import { addProxyWithDedup } from './helpers/proxyHelpers.js';
 import { buildSelectorMembers, buildNodeSelectMembers, buildCustomRuleMembers, uniqueNames } from './helpers/groupBuilder.js';
 import { emitClashRules, sanitizeClashProxyGroups } from './helpers/clashConfigUtils.js';
 import { normalizeGroupName, findGroupIndexByName } from './helpers/groupNameUtils.js';
+import { InvalidConfigError } from '../services/errors.js';
 
 /**
  * Check if the client supports MRS (Meta Rule Set) format
@@ -670,21 +671,22 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
      * Ensures url-test/fallback groups have proxies, fills empty ones with all nodes
      */
     validateProxyGroups() {
-        const proxyList = this.getProxyList();
-        const providerNames = this.getAllProviderNames();
-
         (this.config['proxy-groups'] || []).forEach(group => {
-            // For url-test/fallback groups, ensure they have proxies or providers
-            if ((group.type === 'url-test' || group.type === 'fallback') &&
-                (!group.proxies || group.proxies.length === 0) &&
-                (!group.use || group.use.length === 0)) {
-                // Fill with all available proxies
-                group.proxies = [...proxyList];
-                // Also use all providers if available
-                if (providerNames.length > 0) {
-                    group.use = [...providerNames];
-                }
+            const requiresMembers = group?.type === 'url-test' || group?.type === 'fallback';
+            if (!requiresMembers) {
+                return;
             }
+
+            const hasProxyRefs = Array.isArray(group.proxies) && group.proxies.length > 0;
+            const hasProviderRefs = Array.isArray(group.use) && group.use.length > 0;
+            if (hasProxyRefs || hasProviderRefs) {
+                return;
+            }
+
+            const groupName = group?.name || '(unnamed group)';
+            throw new InvalidConfigError(
+                `Invalid proxy group "${groupName}": type "${group.type}" requires at least one proxy or provider reference`
+            );
         });
     }
 
@@ -711,10 +713,8 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
             };
         }
 
-        // Validate proxy groups: fill empty url-test/fallback groups with all proxies
-        this.validateProxyGroups();
-
         sanitizeClashProxyGroups(this.config);
+        this.validateProxyGroups();
 
         this.config.rules = [
             ...ruleResults,
