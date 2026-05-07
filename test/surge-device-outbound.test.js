@@ -33,3 +33,44 @@ describe('isDeviceOutbound', () => {
         expect(isDeviceOutbound('device:tower')).toBe(false);
     });
 });
+
+import { SurgeConfigBuilder } from '../src/builders/SurgeConfigBuilder.js';
+
+const SAMPLE = 'ss://YWVzLTI1Ni1nY206dGVzdA@1.2.3.4:8388#Node1';
+
+describe('SurgeConfigBuilder — DEVICE outbound on custom rules', () => {
+    it('emits DOMAIN-SUFFIX,...,DEVICE:my-iphone verbatim', async () => {
+        const customRules = [
+            { name: 'DEVICE:my-iphone', domain_suffix: 'work.example.com' }
+        ];
+        const builder = new SurgeConfigBuilder(
+            SAMPLE, ['Non-China'], customRules, null, 'en', '', false, true, []
+        );
+        const text = await builder.build();
+        expect(text).toContain('DOMAIN-SUFFIX,work.example.com,DEVICE:my-iphone');
+    });
+
+    it('does not create a "DEVICE:my-iphone" proxy group', async () => {
+        const customRules = [
+            { name: 'DEVICE:my-iphone', domain_suffix: 'work.example.com' }
+        ];
+        const builder = new SurgeConfigBuilder(
+            SAMPLE, ['Non-China'], customRules, null, 'en', '', false, true, []
+        );
+        const text = await builder.build();
+        const proxyGroupSection = text.split('[Proxy Group]')[1].split('[Rule]')[0];
+        expect(proxyGroupSection).not.toContain('DEVICE:my-iphone =');
+    });
+
+    it('does not call t() on DEVICE outbound (no translation prefix leakage)', async () => {
+        const customRules = [
+            { name: 'DEVICE:tower', domain: 'foo.com' }
+        ];
+        const builder = new SurgeConfigBuilder(
+            SAMPLE, ['Non-China'], customRules, null, 'en', '', false, true, []
+        );
+        const text = await builder.build();
+        expect(text).toContain('DOMAIN,foo.com,DEVICE:tower');
+        expect(text).not.toContain('outboundNames.DEVICE');
+    });
+});
