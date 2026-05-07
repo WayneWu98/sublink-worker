@@ -153,6 +153,10 @@ Sing-Box · Clash · Xray/V2Ray · Surge
 
 ## 🗒️ 更新日志
 
+### v2.10.0
+
+- **新增 Snell 协议支持。** 可识别 Surge 配置段、Clash YAML（`type: snell`，含 `obfs-opts`）以及本工具自定义的 `snell://` 分享链接形式（`snell://<psk>@<host>:<port>?version=&obfs=&obfs-host=&tfo=&reuse=&udp=#name`）。输出端 Surge 与 Clash（Mihomo）原生支持；Sing-Box 无原生 Snell 出站，遇到 Snell 节点时会跳过并在控制台输出警告，不进入策略组。`snell://` 链接为本工具自定义格式，**非社区标准** —— 来自其他工具（Surgio 等）的 `snell://` URL 各家约定不同,不保证可直接解析。
+
 ### v2.9.2
 
 - **自定义规则 IP CIDR 的 `no-resolve` 开关。** 上游对所有用户自定义的 `IP-CIDR` 规则都硬编码了 `no-resolve`，导致客户端在拿到域名（而非 IP）去评估规则时，IP 规则永远不会被命中 —— 流量会静默漏到 Final（Surge 的系统代理 / HTTPS CONNECT 场景尤其常见）。本 Fork 在每条自定义规则的 IP CIDR 字段旁加了一个开关，开启后去除该条规则的 `no-resolve` 标志，客户端会主动解析 DNS 以比对此 IP 规则，从而真正命中。默认关闭，保持与上游一致。仅影响 Clash / mihomo / Surge 输出；sing-box 本身无 `no-resolve` 概念，不受影响。

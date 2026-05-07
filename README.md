@@ -153,6 +153,10 @@ The Fall Back selector's default member (what unmatched traffic uses until the u
 
 ## 🗒️ Changelog
 
+### v2.10.0
+
+- **Snell protocol support.** Parses Snell nodes from Surge config blocks, Clash YAML (`type: snell` with `obfs-opts`), and a new tool-internal `snell://` share-link form (`snell://<psk>@<host>:<port>?version=&obfs=&obfs-host=&tfo=&reuse=&udp=#name`). Outputs natively to Surge and Clash (Mihomo); Sing-Box has no native Snell outbound, so Snell nodes are dropped with a console warning and excluded from selector groups. The `snell://` URL is *not* a community standard — URLs from other tools (Surgio, etc.) follow different conventions and are not guaranteed to round-trip.
+
 ### v2.9.2
 
 - **Per-rule `no-resolve` toggle for Custom Rules IP CIDR.** Upstream emits every user-defined `IP-CIDR` rule with `no-resolve` hard-coded, so the rule silently never matches when the client evaluates rules against a hostname instead of an IP (common with Surge's system proxy / HTTPS CONNECT — traffic falls through to Final). This fork adds a switch next to each custom rule's IP CIDR field that drops the `no-resolve` flag when enabled, letting the client resolve DNS so the IP rule can actually match. Default off preserves upstream behavior. Affects Clash / mihomo / Surge output; sing-box has no equivalent flag and is unchanged.
