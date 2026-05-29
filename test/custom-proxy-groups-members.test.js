@@ -112,23 +112,24 @@ describe('resolveCustomProxyGroupMembers', () => {
     });
 });
 
-describe('member builders include customProxyGroupNames', () => {
+describe('member builders do NOT inject custom proxy group names', () => {
     const t = (k) => k.startsWith('outboundNames.') ? k.slice('outboundNames.'.length) : k;
 
-    it('buildNodeSelectMembers inserts custom group names after the auto anchor', () => {
+    // Custom proxy groups must not be auto-listed as members of the auto-generated
+    // groups. The builders ignore any customProxyGroupNames passed to them.
+    it('buildNodeSelectMembers omits custom group names', () => {
         const out = buildNodeSelectMembers({
             proxyList: ['N1'], translator: t, includeAutoSelect: true,
             customProxyGroupNames: ['HK Auto'],
         });
-        expect(out).toContain('HK Auto');
-        expect(out.indexOf('HK Auto')).toBeLessThan(out.indexOf('N1'));
-        expect(out.indexOf('Auto Select')).toBeLessThan(out.indexOf('HK Auto'));
+        expect(out).not.toContain('HK Auto');
+        expect(out).toContain('N1');
     });
 
-    it('buildSelectorMembers and buildCustomRuleMembers include custom group names', () => {
+    it('buildSelectorMembers and buildCustomRuleMembers omit custom group names', () => {
         const sel = buildSelectorMembers({ proxyList: ['N1'], translator: t, customProxyGroupNames: ['G'] });
         const cr = buildCustomRuleMembers({ proxyList: ['N1'], translator: t, customProxyGroupNames: ['G'] });
-        expect(sel).toContain('G');
-        expect(cr).toContain('G');
+        expect(sel).not.toContain('G');
+        expect(cr).not.toContain('G');
     });
 });

@@ -397,6 +397,16 @@ export class BaseConfigBuilder {
         return this.t('outboundNames.' + raw);
     }
 
+    // Resolve a custom-proxy-group MEMBER reference for THIS platform. Default drops
+    // DEVICE:xxx (Ponte) literals — only Surge supports them, so Clash/sing-box inherit
+    // this default and Surge overrides to keep them. Used by both the early name
+    // precompute (addSelectors) and the emit pass (addCustomProxyGroups) so the two agree
+    // on which groups are non-empty.
+    resolveCustomGroupRef(raw) {
+        if (isDeviceOutbound(raw)) return null;
+        return this.resolveOutboundRef(raw);
+    }
+
     addFallBackGroup(proxyList) {
         throw new Error('addFallBackGroup must be implemented in child class');
     }
@@ -438,10 +448,12 @@ export class BaseConfigBuilder {
             ...sanitizedCustom.map(g => g.name),
             'DIRECT', 'REJECT',
         ]);
-        // Conservative early resolver: drop DEVICE:xxx so a device-only group is NOT
-        // pre-listed (devices are Surge-only and survive only at emit time). This keeps
-        // early-non-empty ⊆ emit-non-empty on every platform → no dangling member refs.
-        const resolveRef = (raw) => isDeviceOutbound(raw) ? null : this.resolveOutboundRef(raw);
+        // Early resolver mirrors the platform's emit-time resolver (resolveCustomGroupRef):
+        // Surge keeps DEVICE:xxx (Ponte) literals, Clash/sing-box drop them. The early ref
+        // set is a subset of the emit-time set, so early-non-empty ⊆ emit-non-empty → no
+        // dangling member refs, AND every name kept here is guaranteed to be emitted, so
+        // rules/rule-sets may safely defer to a same-named custom group instead of shadowing it.
+        const resolveRef = (raw) => this.resolveCustomGroupRef(raw);
         this.customProxyGroupNames = sanitizedCustom
             .filter(g => !resolveCustomProxyGroupMembers(g, { proxyList, resolveRef, validRefSet: earlyRefSet }).empty)
             .map(g => g.name);

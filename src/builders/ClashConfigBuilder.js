@@ -393,8 +393,7 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
             groupByCountry: this.groupByCountry,
             manualGroupName: this.manualGroupName,
             countryGroupNames: this.countryGroupNames,
-            includeAutoSelect: this.shouldIncludeAutoSelectGroup(proxyList),
-            customProxyGroupNames: this.customProxyGroupNames
+            includeAutoSelect: this.shouldIncludeAutoSelectGroup(proxyList)
         });
 
         const group = {
@@ -419,8 +418,7 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
             groupByCountry: this.groupByCountry,
             manualGroupName: this.manualGroupName,
             countryGroupNames: this.countryGroupNames,
-            includeAutoSelect: this.shouldIncludeAutoSelectGroup(proxyList),
-            customProxyGroupNames: this.customProxyGroupNames
+            includeAutoSelect: this.shouldIncludeAutoSelectGroup(proxyList)
         });
     }
 
@@ -456,14 +454,16 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
                 // Skip built-in outbound names to avoid shadowing them with a same-named group.
                 if (RESERVED_OUTBOUNDS.has(String(rule.name || '').toUpperCase())) return;
                 if (isDeviceOutbound(rule.name)) return;
+                // A custom proxy group of the same name DEFINES this group (emitted later in
+                // addCustomProxyGroups) — defer to it instead of shadowing it with a rule-group.
+                if (this.customProxyGroupNames.includes(rule.name)) return;
                 const name = this.t(`outboundNames.${rule.name}`);
                 if (!this.hasProxyGroup(name)) {
                     const proxies = buildCustomRuleMembers({
                         proxyList,
                         translator: this.t,
                         manualGroupName: this.manualGroupName,
-                        includeAutoSelect: this.shouldIncludeAutoSelectGroup(proxyList),
-                        customProxyGroupNames: this.customProxyGroupNames
+                        includeAutoSelect: this.shouldIncludeAutoSelectGroup(proxyList)
                     });
                     const group = {
                         type: "select",
@@ -488,10 +488,12 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
             if (!name) return;
             if (RESERVED_OUTBOUNDS.has(name.toUpperCase())) return;
             if (isDeviceOutbound(item.outbound)) return;
+            // Defer to a same-named custom proxy group (emitted later) instead of shadowing it.
+            if (this.customProxyGroupNames.includes(name)) return;
             if (this.hasProxyGroup(name)) return;
             let proxies = this.buildSelectGroupMembers(proxyList);
             const def = this.resolveCustomRuleSetDefault(item);
-            if (def && proxies.includes(def)) {
+            if (def && (proxies.includes(def) || this.customProxyGroupNames.includes(def))) {
                 proxies = [def, ...proxies.filter(p => p !== def)];
             }
             this.config['proxy-groups'].push({ type: 'select', name, proxies });
@@ -520,8 +522,8 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
             ...groups.map(g => g.name),
             'DIRECT', 'REJECT'
         ]);
-        // Clash has no Ponte devices — drop DEVICE:xxx refs.
-        const resolveRef = (raw) => isDeviceOutbound(raw) ? null : this.resolveOutboundRef(raw);
+        // Clash has no Ponte devices — resolveCustomGroupRef drops DEVICE:xxx refs.
+        const resolveRef = (raw) => this.resolveCustomGroupRef(raw);
 
         groups.forEach(g => {
             if (this.hasProxyGroup(g.name)) return;
@@ -543,7 +545,7 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
         if (this.hasProxyGroup(name)) return;
         let proxies = this.buildSelectGroupMembers(proxyList);
         const def = this.resolveFallbackDefault();
-        if (def && proxies.includes(def)) {
+        if (def && (proxies.includes(def) || this.customProxyGroupNames.includes(def))) {
             proxies = [def, ...proxies.filter(p => p !== def)];
         }
         const group = {

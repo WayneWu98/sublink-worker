@@ -74,3 +74,57 @@ describe('custom proxy groups — full integration', () => {
         expect(clash).not.toContain('DEVICE:iPhone');
     });
 });
+
+// A custom proxy group and a custom rule may intentionally share a name: the group
+// DEFINES the policy (its members), the rule ROUTES traffic to it. The explicit group
+// must win the name over the auto rule-group that would otherwise be generated.
+describe('custom proxy group named like a custom rule defines the group', () => {
+    it('Surge: a device-only group keeps its DEVICE member instead of the auto full-node list', async () => {
+        const app = createApp();
+        const res = await app.request(url('/surge', {
+            selectedRules: ['Non-China'],
+            customRules: [{ name: 'Ponte MacMini', domain_suffix: 'macmini.ponte' }],
+            customProxyGroups: [{ name: 'Ponte MacMini', type: 'select', proxies: ['DEVICE:macmini'] }],
+        }));
+        const text = await res.text();
+        // The group is the user-defined device group, NOT the auto Node-Select/proxy list.
+        expect(text).toMatch(/^Ponte MacMini = select, DEVICE:macmini$/m);
+        // Exactly one "Ponte MacMini =" group line (no shadow/duplicate).
+        expect(text.split('\n').filter(l => /^Ponte MacMini = /.test(l))).toHaveLength(1);
+        // The custom rule routes to it.
+        expect(text).toContain('DOMAIN-SUFFIX,macmini.ponte,Ponte MacMini');
+        // The custom group is NOT auto-listed as a member of any other policy group.
+        text.split('\n')
+            .filter(l => /=\s*(select|url-test),/.test(l) && !l.startsWith('Ponte MacMini = '))
+            .forEach(l => expect(l).not.toContain('Ponte MacMini'));
+    });
+
+    it('Clash: a device-only group is empty, so the same-named custom rule still forms its selector (no DEVICE leak)', async () => {
+        const app = createApp();
+        const res = await app.request(url('/clash', {
+            selectedRules: ['Non-China'],
+            customRules: [{ name: 'Ponte MacMini', domain_suffix: 'macmini.ponte' }],
+            customProxyGroups: [{ name: 'Ponte MacMini', type: 'select', proxies: ['DEVICE:macmini'] }],
+        }));
+        const yaml = await res.text();
+        expect(yaml).toContain('name: Ponte MacMini'); // routable group still exists
+        expect(yaml).not.toContain('DEVICE:macmini');   // device never leaks to Clash
+        expect(yaml).toContain('DOMAIN-SUFFIX,macmini.ponte,Ponte MacMini');
+    });
+
+    it('Surge: a non-device group defines explicit members instead of the auto full-node list', async () => {
+        const app = createApp();
+        const res = await app.request(url('/surge', {
+            selectedRules: ['Non-China'],
+            customRules: [{ name: 'Combo', domain: 'combo.example' }],
+            customProxyGroups: [{ name: 'Combo', type: 'select', proxies: ['Node Select', 'DIRECT'] }],
+        }));
+        const text = await res.text();
+        const comboLine = text.split('\n').find(l => l.startsWith('Combo = '));
+        expect(comboLine).toBeTruthy();
+        expect(comboLine).toContain('DIRECT');
+        expect(comboLine).not.toContain('HK-1'); // not the auto full-node rule-group list
+        expect(comboLine).not.toContain('US-1');
+        expect(text).toContain('DOMAIN,combo.example,Combo');
+    });
+});

@@ -26,6 +26,12 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
         return this.t('outboundNames.' + raw);
     }
 
+    // Surge supports Ponte DEVICE:xxx policy literals as group members — keep them
+    // (Clash/sing-box drop them via the base default).
+    resolveCustomGroupRef(raw) {
+        return this.resolveOutboundRef(raw);
+    }
+
     setSubscriptionUrl(url) {
         this.subscriptionUrl = url;
         return this;
@@ -265,8 +271,7 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
             groupByCountry: false,
             manualGroupName: this.manualGroupName,
             countryGroupNames: this.countryGroupNames,
-            includeAutoSelect: this.includeAutoSelect,
-            customProxyGroupNames: this.customProxyGroupNames
+            includeAutoSelect: this.includeAutoSelect
         });
     }
 
@@ -277,8 +282,7 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
             groupByCountry: this.groupByCountry,
             manualGroupName: this.manualGroupName,
             countryGroupNames: this.countryGroupNames,
-            includeAutoSelect: this.includeAutoSelect,
-            customProxyGroupNames: this.customProxyGroupNames
+            includeAutoSelect: this.includeAutoSelect
         });
     }
 
@@ -330,13 +334,15 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
                 // Skip built-in outbound names to avoid shadowing them with a same-named group.
                 if (RESERVED_OUTBOUNDS.has(String(rule.name || '').toUpperCase())) return;
                 if (isDeviceOutbound(rule.name)) return;
+                // A custom proxy group of the same name DEFINES this group (emitted later in
+                // addCustomProxyGroups) — defer to it instead of shadowing it with a rule-group.
+                if (this.customProxyGroupNames.includes(rule.name)) return;
                 if (this.hasProxyGroup(rule.name)) return;
                 const options = buildCustomRuleMembers({
                     proxyList,
                     translator: this.t,
                     manualGroupName: this.manualGroupName,
-                    includeAutoSelect: this.includeAutoSelect,
-                    customProxyGroupNames: this.customProxyGroupNames
+                    includeAutoSelect: this.includeAutoSelect
                 });
                 this.config['proxy-groups'].push(
                     this.createProxyGroup(rule.name, 'select', options)
@@ -352,10 +358,12 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
             if (!name) return;
             if (RESERVED_OUTBOUNDS.has(name.toUpperCase())) return;
             if (isDeviceOutbound(item.outbound)) return;
+            // Defer to a same-named custom proxy group (emitted later) instead of shadowing it.
+            if (this.customProxyGroupNames.includes(name)) return;
             if (this.hasProxyGroup(name)) return;
             let options = this.buildAggregatedOptions(proxyList);
             const def = this.resolveCustomRuleSetDefault(item);
-            if (def && options.includes(def)) {
+            if (def && (options.includes(def) || this.customProxyGroupNames.includes(def))) {
                 options = [def, ...options.filter(o => o !== def)];
             }
             this.config['proxy-groups'].push(this.createProxyGroup(name, 'select', options));
@@ -385,7 +393,7 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
             ...groups.map(g => g.name),
             'DIRECT', 'REJECT'
         ]);
-        const resolveRef = (raw) => this.resolveOutboundRef(raw);
+        const resolveRef = (raw) => this.resolveCustomGroupRef(raw);
 
         groups.forEach(g => {
             if (this.hasProxyGroup(g.name)) return;
@@ -401,7 +409,7 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
         let options = this.buildAggregatedOptions(proxyList);
         if (this.hasProxyGroup(this.t('outboundNames.Fall Back'))) return;
         const def = this.resolveFallbackDefault();
-        if (def && options.includes(def)) {
+        if (def && (options.includes(def) || this.customProxyGroupNames.includes(def))) {
             options = [def, ...options.filter(o => o !== def)];
         }
         this.config['proxy-groups'].push(

@@ -191,8 +191,7 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
             manualGroupName: this.manualGroupName,
             countryGroupNames: this.countryGroupNames,
             includeAutoSelect,
-            includeReject: false,
-            customProxyGroupNames: this.customProxyGroupNames
+            includeReject: false
         });
 
         const group = {
@@ -218,8 +217,7 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
             manualGroupName: this.manualGroupName,
             countryGroupNames: this.countryGroupNames,
             includeAutoSelect: this.includeAutoSelect && this.hasAutoSelectCandidates(proxyList),
-            includeReject: false,
-            customProxyGroupNames: this.customProxyGroupNames
+            includeReject: false
         });
     }
 
@@ -251,14 +249,16 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
                 // Skip built-in outbound names to avoid shadowing them with a same-named group.
                 if (RESERVED_OUTBOUNDS.has(String(rule.name || '').toUpperCase())) return;
                 if (isDeviceOutbound(rule.name)) return;
+                // A custom proxy group of the same name DEFINES this group (emitted later in
+                // addCustomProxyGroups) — defer to it instead of shadowing it with a rule-group.
+                if (this.customProxyGroupNames.includes(rule.name)) return;
                 const includeAutoSelect = this.includeAutoSelect && this.hasAutoSelectCandidates(proxyList);
                 const selectorMembers = buildCustomRuleMembers({
                     proxyList,
                     translator: this.t,
                     manualGroupName: this.manualGroupName,
                     includeAutoSelect,
-                    includeReject: false,
-                    customProxyGroupNames: this.customProxyGroupNames
+                    includeReject: false
                 });
                 if (this.hasOutboundTag(rule.name)) return;
                 this.config.outbounds.push({
@@ -277,9 +277,16 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
             if (!name) return;
             if (RESERVED_OUTBOUNDS.has(name.toUpperCase())) return;
             if (isDeviceOutbound(item.outbound)) return;
+            // Defer to a same-named custom proxy group (emitted later) instead of shadowing it.
+            if (this.customProxyGroupNames.includes(name)) return;
             if (this.hasOutboundTag(name)) return;
             const members = this.buildSelectorMembers(proxyList);
             const def = this.resolveCustomRuleSetDefault(item);
+            // A custom proxy group isn't auto-listed; if explicitly chosen as this rule-set's
+            // outbound, add it so it can be the selector default (sing-box default must be a member).
+            if (def && this.customProxyGroupNames.includes(def) && !members.includes(def)) {
+                members.unshift(def);
+            }
             const entry = {
                 type: 'selector',
                 tag: name,
@@ -312,8 +319,8 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
             ...groups.map(g => g.name),
             'DIRECT', 'REJECT'
         ]);
-        // sing-box has no Ponte devices — drop DEVICE:xxx refs.
-        const resolveRef = (raw) => isDeviceOutbound(raw) ? null : this.resolveOutboundRef(raw);
+        // sing-box has no Ponte devices — resolveCustomGroupRef drops DEVICE:xxx refs.
+        const resolveRef = (raw) => this.resolveCustomGroupRef(raw);
 
         groups.forEach(g => {
             if (this.hasOutboundTag(g.name)) return;
@@ -329,12 +336,17 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
     addFallBackGroup(proxyList) {
         const selectorMembers = this.buildSelectorMembers(proxyList);
         if (this.hasOutboundTag(this.t('outboundNames.Fall Back'))) return;
+        const def = this.resolveFallbackDefault();
+        // A custom proxy group isn't auto-listed; if explicitly chosen as the fallback,
+        // add it so it can be the selector default (sing-box default must be a member).
+        if (def && this.customProxyGroupNames.includes(def) && !selectorMembers.includes(def)) {
+            selectorMembers.unshift(def);
+        }
         const entry = {
             type: "selector",
             tag: this.t('outboundNames.Fall Back'),
             outbounds: selectorMembers
         };
-        const def = this.resolveFallbackDefault();
         if (def && selectorMembers.includes(def)) {
             entry.default = def;
         }

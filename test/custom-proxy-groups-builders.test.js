@@ -49,17 +49,18 @@ describe('Clash custom proxy groups', () => {
         expect(yaml).toMatch(/type: fallback\n\s+name: FB/);
     });
 
-    it('adds the custom group to Node Select members', async () => {
+    it('does NOT inject the custom group into Node Select members', async () => {
         const app = createApp();
         const res = await app.request(url('/clash', {
             selectedRules: ['Non-China'],
             customProxyGroups: [{ name: 'HK Auto', type: 'url-test', filter: 'HK' }],
         }));
         const yaml = await res.text();
-        // type is emitted before name; after `name:` the next key is `proxies:`.
+        expect(yaml).toMatch(/name: HK Auto/); // the group itself is still emitted
+        // ...but it is NOT auto-listed as a member of Node Select.
         const ns = yaml.match(/name: 🚀 Node Select\n\s+proxies:\n((?:\s+-\s+.+\n)+)/);
         expect(ns).toBeTruthy();
-        expect(ns[1]).toContain('- HK Auto');
+        expect(ns[1]).not.toContain('- HK Auto');
     });
 
     it('drops an empty group (filter matches nothing, no refs)', async () => {
@@ -94,7 +95,7 @@ describe('Singbox custom proxy groups', () => {
         expect(byTag['LB'].type).toBe('urltest');
     });
 
-    it('select maps to selector and joins Node Select members', async () => {
+    it('select maps to selector with its own members, but is NOT injected into Node Select', async () => {
         const app = createApp();
         const res = await app.request(url('/singbox', {
             selectedRules: ['Non-China'],
@@ -104,7 +105,8 @@ describe('Singbox custom proxy groups', () => {
         const node = json.outbounds.find(o => o.tag === '🚀 Node Select');
         const pick = json.outbounds.find(o => o.tag === 'Pick');
         expect(pick.type).toBe('selector');
-        expect(node.outbounds).toContain('Pick');
+        expect(pick.outbounds).toContain('🚀 Node Select'); // Pick's own chosen member
+        expect(node.outbounds).not.toContain('Pick');         // not auto-listed in Node Select
     });
 });
 
@@ -125,14 +127,16 @@ describe('Surge custom proxy groups', () => {
         expect(text).toMatch(/^LB = url-test,/m); // load-balance degraded
     });
 
-    it('select line includes the group in Node Select options', async () => {
+    it('emits the select line but does NOT inject the group into Node Select options', async () => {
         const app = createApp();
         const res = await app.request(url('/surge', {
             selectedRules: ['Non-China'],
             customProxyGroups: [{ name: 'Pick', type: 'select', proxies: ['Node Select'] }],
         }));
         const text = await res.text();
-        expect(text).toMatch(/^Pick = select,/m);
-        expect(text).toMatch(/^🚀 Node Select = select,.*Pick/m);
+        expect(text).toMatch(/^Pick = select,/m); // the group itself is emitted
+        const ns = text.split('\n').find(l => l.startsWith('🚀 Node Select = '));
+        expect(ns).toBeTruthy();
+        expect(ns).not.toContain('Pick'); // not auto-listed in Node Select
     });
 });
