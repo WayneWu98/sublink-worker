@@ -48,6 +48,8 @@
 - **规则组扩展（v2.9+）** —— 新增 15 个内置扩展规则组；可订阅的「自定义规则集」支持 MetaCubeX / blackmatrix7 / Loyalsoldier / ACL4SSR / 自定义 URL 五种源，每条自动生成独立策略组；自定义规则的「出站」改为下拉选择有效目标；新增「漏网之鱼出站」设置；分享链接新增 `customRuleSets` 和 `fallback_outbound` 参数。
 - **自定义规则 IP CIDR 的 `no-resolve` 开关（v2.9.2+）** —— 上游对所有自定义 `IP-CIDR` 规则硬编码 `no-resolve`，导致客户端拿到域名（而非 IP）评估规则时，IP 规则永远不会命中（Surge 系统代理 / HTTPS CONNECT 场景下流量会直接漏到 Final）。本 Fork 在每条自定义规则的 IP CIDR 字段旁加了一个开关，开启后去除 `no-resolve` 标志，让客户端主动解析 DNS 以比对 IP 规则。默认关闭以保持与上游一致。仅影响 Clash / mihomo / Surge 输出，sing-box 无此概念。
 
+- **自定义策略组（v2.11+）** —— 表单新增「自定义策略组」区块:自定义命名策略组,选择类型(`select` / `url-test` / `fallback` / `load-balance`),成员从已有组里选(节点选择=全部节点、自动选择、地区/规则/规则集组、Surge 设备、其它自定义组)以及 DIRECT/REJECT。服务端校验并解析,三端(Clash / mihomo / sing-box / Surge)一致产出,不支持的类型按平台降级;可作为「自定义规则」「自定义规则集」「漏网之鱼」的出站目标。分享链接新增 `customProxyGroups` 参数,支持短码 /「Load from Code」回填。
+
 每项改动的详细说明与迁移指南参见下方「更新日志」章节。
 
 ## ⚠️ 数据留存须知
@@ -152,6 +154,10 @@ Sing-Box · Clash · Xray/V2Ray · Surge
 未命中任何规则时流量走哪里现在可以在「高级选项 → 通用设置」里选——`节点选择`（默认）、`DIRECT` 或 `REJECT`。
 
 ## 🗒️ 更新日志
+
+### v2.11.0
+
+- **自定义策略组。** 表单新增一个区块,可自定义命名策略组:选择类型(`select` / `url-test` / `fallback` / `load-balance`),成员从已有组里选 —— 节点选择(=全部节点)、自动选择、地区 / 规则 / 规则集组、Surge(Ponte)设备、其它自定义组 —— 以及 DIRECT/REJECT。成员只用「引用」:有「节点选择」即代表全部节点,所以不做节点名正则、也不暴露每组测试 URL 配置(与内置的自动选择保持一致)。服务端校验并产出,三端(Clash / mihomo / sing-box / Surge)一致;无原生支持的类型自动降级(sing-box 的 `fallback`/`load-balance` → `urltest`;Surge 的 `load-balance` → `url-test`)。自定义组是「自定义规则」「自定义规则集」「漏网之鱼」的一等出站目标。`DEVICE:` 设备成员在 Surge 保留、在 Clash/sing-box 丢弃(它们没有 Ponte)。分享链接新增 `customProxyGroups` 参数,并支持短码 /「Load from Code」恢复。
 
 ### v2.10.4
 

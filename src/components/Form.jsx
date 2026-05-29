@@ -3,6 +3,7 @@
 import { PREDEFINED_RULE_SETS, UNIFIED_RULES } from '../config/index.js';
 import { CustomRules } from './CustomRules.jsx';
 import { CustomRuleSets } from './CustomRuleSets.jsx';
+import { CustomProxyGroups } from './CustomProxyGroups.jsx';
 import { SurgeDevices } from './SurgeDevices.jsx';
 import { TextareaWithActions } from './TextareaWithActions.jsx';
 import { ValidatedTextarea } from './ValidatedTextarea.jsx';
@@ -233,6 +234,9 @@ export const Form = (props) => {
   {/* Custom RuleSets Component */ }
   <CustomRuleSets t={t} />
 
+  {/* Custom Proxy Groups Component */ }
+  <CustomProxyGroups t={t} />
+
   {/* Custom Rules Component */ }
   <CustomRules t={t} />
 
@@ -264,9 +268,16 @@ export const Form = (props) => {
                 <div class="flex items-center justify-between gap-4">
                   <span class="font-medium text-gray-700 dark:text-gray-300">{t('fallbackOutbound')}</span>
                   <select x-model="fallbackOutbound" class="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-primary-500 focus:border-transparent">
-                    <option value="Node Select">{t('outboundNames.Node Select')}</option>
-                    <option value="DIRECT">DIRECT</option>
-                    <option value="REJECT">REJECT</option>
+                    <optgroup label={t('outboundBuiltIn')}>
+                      <option value="Node Select">{t('outboundNames.Node Select')}</option>
+                      <option value="DIRECT">DIRECT</option>
+                      <option value="REJECT">REJECT</option>
+                    </optgroup>
+                    <optgroup label={t('customProxyGroupsSection')} x-show="customProxyGroupNames().length > 0">
+                      <template x-for="n in customProxyGroupNames()" x-bind:key="n">
+                        <option x-bind:value="n" x-text="n"></option>
+                      </template>
+                    </optgroup>
                   </select>
                 </div>
                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('fallbackOutboundHint')}</p>

@@ -48,6 +48,8 @@ This is a community fork of **[7Sageer/sublink-worker](https://github.com/7Sagee
 - **Rule groups expansion (v2.9+)** — 15 extended built-in rule groups, subscribable Custom RuleSets backed by a provider dictionary (MetaCubeX / blackmatrix7 / Loyalsoldier / ACL4SSR / custom URL) that each register their own proxy group, Custom Rules outbound as a dropdown of valid targets, configurable Fall Back default, and `customRuleSets` + `fallback_outbound` share-URL params.
 - **Per-rule `no-resolve` toggle for Custom Rules IP CIDR (v2.9.2+)** — Upstream hard-codes `no-resolve` on every user-defined `IP-CIDR` rule, which silently bypasses the rule whenever the client hands the rule engine a hostname instead of an IP (common with Surge's system proxy / HTTPS CONNECT). A switch next to the IP CIDR field drops that flag per rule so the client resolves DNS and the rule actually matches. Default off preserves upstream behavior. Affects Clash / mihomo / Surge output.
 
+- **Custom proxy groups (v2.11+)** — a new form section to define your own named policy groups: pick a type (`select` / `url-test` / `fallback` / `load-balance`) and members by referencing existing groups (Node Select = all nodes, Auto Select, region/rule/ruleset groups, Surge devices, other custom groups) plus DIRECT/REJECT. Resolved server-side and emitted across Clash / mihomo / sing-box / Surge with per-platform type degradation, and usable as outbound targets in Custom Rules, Custom RuleSets and the Fall Back selector. New `customProxyGroups` share-URL param with full short-code round-trip.
+
 See the Changelog below for detailed release notes and migration guidance for each change.
 
 ## ⚠️ Data Retention Notice
@@ -152,6 +154,10 @@ Entries round-trip through share links via the `customRuleSets` URL parameter. P
 The Fall Back selector's default member (what unmatched traffic uses until the user switches) is now configurable from Advanced Options → General Settings. Choose `Node Select` (default), `DIRECT`, or `REJECT`.
 
 ## 🗒️ Changelog
+
+### v2.11.0
+
+- **Custom proxy groups (自定义策略组).** New form section to define named policy groups with a chosen type (`select` / `url-test` / `fallback` / `load-balance`) and members selected from existing groups — Node Select (= all nodes), Auto Select, region / rule / rule-set groups, Surge (Ponte) devices, other custom groups — plus DIRECT/REJECT. Members are references only; "Node Select" covers "all nodes" so there is no node-name regex and no per-group test-URL config (parity with the built-in Auto Select). Groups are validated and emitted server-side and stay consistent across Clash / mihomo / sing-box / Surge: types with no native equivalent degrade to the closest auto type (sing-box `fallback`/`load-balance` → `urltest`; Surge `load-balance` → `url-test`). Custom groups are first-class outbound targets in Custom Rules, Custom RuleSets and the Fall Back selector. `DEVICE:` members are kept on Surge and dropped on Clash/sing-box (they have no Ponte). New `customProxyGroups` share-URL parameter, including short-code / "Load from Code" restore.
 
 ### v2.10.4
 

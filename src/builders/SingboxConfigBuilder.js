@@ -4,10 +4,11 @@ import { BaseConfigBuilder, RESERVED_OUTBOUNDS, isDeviceOutbound } from './BaseC
 import { deepCopy, groupProxiesByCountry } from '../utils.js';
 import { addProxyWithDedup } from './helpers/proxyHelpers.js';
 import { buildSelectorMembers as buildSelectorMemberList, buildNodeSelectMembers, buildCustomRuleMembers, uniqueNames } from './helpers/groupBuilder.js';
+import { sanitizeCustomProxyGroups, resolveCustomProxyGroupMembers, mapGroupType } from './helpers/customProxyGroups.js';
 import { normalizeGroupName } from './helpers/groupNameUtils.js';
 
 export class SingboxConfigBuilder extends BaseConfigBuilder {
-    constructor(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry = false, enableClashUI = false, externalController, externalUiDownloadUrl, singboxVersion = '1.12', includeAutoSelect = true, customRuleSets = [], fallbackOutbound = 'Node Select') {
+    constructor(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry = false, enableClashUI = false, externalController, externalUiDownloadUrl, singboxVersion = '1.12', includeAutoSelect = true, customRuleSets = [], fallbackOutbound = 'Node Select', customProxyGroups = []) {
         const resolvedBaseConfig = baseConfig ?? SING_BOX_CONFIG;
         super(inputString, resolvedBaseConfig, lang, userAgent, groupByCountry, includeAutoSelect);
 
@@ -15,6 +16,7 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
         this.customRules = customRules;
         this.customRuleSets = customRuleSets || [];
         this.fallbackOutbound = fallbackOutbound || 'Node Select';
+        this.customProxyGroups = customProxyGroups || [];
         this.countryGroupNames = [];
         this.manualGroupName = null;
         this.enableClashUI = enableClashUI;
@@ -189,7 +191,8 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
             manualGroupName: this.manualGroupName,
             countryGroupNames: this.countryGroupNames,
             includeAutoSelect,
-            includeReject: false
+            includeReject: false,
+            customProxyGroupNames: this.customProxyGroupNames
         });
 
         const group = {
@@ -215,7 +218,8 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
             manualGroupName: this.manualGroupName,
             countryGroupNames: this.countryGroupNames,
             includeAutoSelect: this.includeAutoSelect && this.hasAutoSelectCandidates(proxyList),
-            includeReject: false
+            includeReject: false,
+            customProxyGroupNames: this.customProxyGroupNames
         });
     }
 
@@ -253,7 +257,8 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
                     translator: this.t,
                     manualGroupName: this.manualGroupName,
                     includeAutoSelect,
-                    includeReject: false
+                    includeReject: false,
+                    customProxyGroupNames: this.customProxyGroupNames
                 });
                 if (this.hasOutboundTag(rule.name)) return;
                 this.config.outbounds.push({
@@ -289,6 +294,36 @@ export class SingboxConfigBuilder extends BaseConfigBuilder {
         const raw = item?.outbound || 'Node Select';
         if (raw === 'DIRECT' || raw === 'REJECT') return raw;
         return this.t('outboundNames.' + raw);
+    }
+
+    getExistingGroupNames() {
+        return (this.config.outbounds || [])
+            .filter(o => o && (o.type === 'selector' || o.type === 'urltest') && o.tag)
+            .map(o => o.tag);
+    }
+
+    addCustomProxyGroups(proxyList) {
+        const groups = sanitizeCustomProxyGroups(this.customProxyGroups, this.getExistingGroupNames());
+        if (groups.length === 0) return;
+
+        const validRefSet = new Set([
+            ...proxyList,
+            ...this.getExistingGroupNames(),
+            ...groups.map(g => g.name),
+            'DIRECT', 'REJECT'
+        ]);
+        // sing-box has no Ponte devices — drop DEVICE:xxx refs.
+        const resolveRef = (raw) => isDeviceOutbound(raw) ? null : this.resolveOutboundRef(raw);
+
+        groups.forEach(g => {
+            if (this.hasOutboundTag(g.name)) return;
+            const { members, empty } = resolveCustomProxyGroupMembers(g, { proxyList, resolveRef, validRefSet });
+            if (empty) return;
+            const nativeType = mapGroupType(g.type, 'singbox'); // 'selector' | 'urltest'
+            // Match the existing auto-select group: sing-box urltest uses engine
+            // defaults for url/interval, so we omit them here too.
+            this.config.outbounds.push({ type: nativeType, tag: g.name, outbounds: members });
+        });
     }
 
     addFallBackGroup(proxyList) {

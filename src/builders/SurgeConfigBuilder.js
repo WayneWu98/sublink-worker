@@ -4,15 +4,17 @@ import { SURGE_CONFIG, SURGE_SITE_RULE_SET_BASEURL, SURGE_IP_RULE_SET_BASEURL, g
 import { resolveCustomRuleSetUrl } from '../config/ruleGenerators.js';
 import { addProxyWithDedup } from './helpers/proxyHelpers.js';
 import { buildSelectorMembers, buildNodeSelectMembers, buildCustomRuleMembers, uniqueNames } from './helpers/groupBuilder.js';
+import { sanitizeCustomProxyGroups, resolveCustomProxyGroupMembers, mapGroupType, isAutoType } from './helpers/customProxyGroups.js';
 
 export class SurgeConfigBuilder extends BaseConfigBuilder {
-    constructor(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry, includeAutoSelect = true, customRuleSets = [], fallbackOutbound = 'Node Select') {
+    constructor(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry, includeAutoSelect = true, customRuleSets = [], fallbackOutbound = 'Node Select', customProxyGroups = []) {
         const resolvedBaseConfig = baseConfig ?? SURGE_CONFIG;
         super(inputString, resolvedBaseConfig, lang, userAgent, groupByCountry, includeAutoSelect);
         this.selectedRules = selectedRules;
         this.customRules = customRules;
         this.customRuleSets = customRuleSets || [];
         this.fallbackOutbound = fallbackOutbound || 'Node Select';
+        this.customProxyGroups = customProxyGroups || [];
         this.subscriptionUrl = null;
         this.countryGroupNames = [];
         this.manualGroupName = null;
@@ -263,7 +265,8 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
             groupByCountry: false,
             manualGroupName: this.manualGroupName,
             countryGroupNames: this.countryGroupNames,
-            includeAutoSelect: this.includeAutoSelect
+            includeAutoSelect: this.includeAutoSelect,
+            customProxyGroupNames: this.customProxyGroupNames
         });
     }
 
@@ -274,7 +277,8 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
             groupByCountry: this.groupByCountry,
             manualGroupName: this.manualGroupName,
             countryGroupNames: this.countryGroupNames,
-            includeAutoSelect: this.includeAutoSelect
+            includeAutoSelect: this.includeAutoSelect,
+            customProxyGroupNames: this.customProxyGroupNames
         });
     }
 
@@ -331,7 +335,8 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
                     proxyList,
                     translator: this.t,
                     manualGroupName: this.manualGroupName,
-                    includeAutoSelect: this.includeAutoSelect
+                    includeAutoSelect: this.includeAutoSelect,
+                    customProxyGroupNames: this.customProxyGroupNames
                 });
                 this.config['proxy-groups'].push(
                     this.createProxyGroup(rule.name, 'select', options)
@@ -362,6 +367,34 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
         if (raw === 'DIRECT' || raw === 'REJECT') return raw;
         if (isDeviceOutbound(raw)) return raw;
         return this.t('outboundNames.' + raw);
+    }
+
+    getExistingGroupNames() {
+        return (this.config['proxy-groups'] || [])
+            .map(line => (typeof line === 'string' ? line.split('=')[0].trim() : null))
+            .filter(Boolean);
+    }
+
+    addCustomProxyGroups(proxyList) {
+        const groups = sanitizeCustomProxyGroups(this.customProxyGroups, this.getExistingGroupNames());
+        if (groups.length === 0) return;
+
+        const validRefSet = new Set([
+            ...proxyList,
+            ...this.getExistingGroupNames(),
+            ...groups.map(g => g.name),
+            'DIRECT', 'REJECT'
+        ]);
+        const resolveRef = (raw) => this.resolveOutboundRef(raw);
+
+        groups.forEach(g => {
+            if (this.hasProxyGroup(g.name)) return;
+            const { members, empty } = resolveCustomProxyGroupMembers(g, { proxyList, resolveRef, validRefSet });
+            if (empty) return;
+            const nativeType = mapGroupType(g.type, 'surge'); // 'select'|'url-test'|'fallback'
+            const extra = isAutoType(nativeType) ? `, url=${g.testUrl}, interval=${g.interval}` : '';
+            this.config['proxy-groups'].push(this.createProxyGroup(g.name, nativeType, members, extra));
+        });
     }
 
     addFallBackGroup(proxyList) {

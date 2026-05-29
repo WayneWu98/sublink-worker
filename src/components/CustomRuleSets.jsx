@@ -161,6 +161,11 @@ export const CustomRuleSets = (props) => {
                                                 <option x-bind:value="'DEVICE:' + n" x-text="'DEVICE:' + n"></option>
                                             </template>
                                         </optgroup>
+                                        <optgroup label={t('customProxyGroupsSection')} x-show="customProxyGroupNames().length > 0">
+                                            <template x-for="n in customProxyGroupNames()" x-bind:key="n">
+                                                <option x-bind:value="n" x-text="n"></option>
+                                            </template>
+                                        </optgroup>
                                     </select>
                                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('ruleSetOutboundHint')}</p>
                                 </div>
@@ -214,6 +219,15 @@ export const CustomRuleSets = (props) => {
                     } catch { return []; }
                 }
 
+                function crsReadCustomProxyGroups() {
+                    const el = document.querySelector('input[name="customProxyGroups"]');
+                    if (!el || !el.value) return [];
+                    try {
+                        const parsed = JSON.parse(el.value);
+                        return Array.isArray(parsed) ? parsed : [];
+                    } catch { return []; }
+                }
+
                 function resolveProviderUrlClient(providerId, type, format, file) {
                     const provider = RULE_SET_PROVIDERS[providerId];
                     if (!provider) return null;
@@ -230,6 +244,7 @@ export const CustomRuleSets = (props) => {
                         jsonContent: '[]',
                         jsonError: null,
                         surgeDevicesVersion: 0,
+                        customProxyGroupsVersion: 0,
                         previewUrl(rule, format) {
                             if (!rule || rule.provider === 'custom' || !rule.file) return '';
                             const url = resolveProviderUrlClient(rule.provider, rule.type || 'site', format, rule.file);
@@ -249,6 +264,11 @@ export const CustomRuleSets = (props) => {
                             const names = readSiblingSurgeDevicesForRuleSets().map(d => d && d.name).filter(Boolean);
                             return Array.from(new Set(names));
                         },
+                        customProxyGroupNames() {
+                            void this.customProxyGroupsVersion;
+                            const names = crsReadCustomProxyGroups().map(g => g && g.name).filter(Boolean);
+                            return Array.from(new Set(names));
+                        },
                         isValidOutbound(value, rowIdx) {
                             if (!value) return false;
                             if (STATIC_OUTBOUND_VALUES.includes(value)) return true;
@@ -257,6 +277,7 @@ export const CustomRuleSets = (props) => {
                             for (let i = 0; i < rowIdx; i++) {
                                 if (this.rules[i] && this.rules[i].name === value) return true;
                             }
+                            if (this.customProxyGroupNames().includes(value)) return true;
                             if (typeof value === 'string' && value.startsWith('DEVICE:')) {
                                 const name = value.slice(7);
                                 if (this.surgeDeviceNames().includes(name)) return true;
@@ -295,6 +316,10 @@ export const CustomRuleSets = (props) => {
                             window.addEventListener('selected-rules-changed', () => this.validateOutbounds());
                             window.addEventListener('surge-devices-changed', () => {
                                 this.surgeDevicesVersion++;
+                                this.validateOutbounds();
+                            });
+                            window.addEventListener('custom-proxy-groups-changed', () => {
+                                this.customProxyGroupsVersion++;
                                 this.validateOutbounds();
                             });
                         },

@@ -2,6 +2,7 @@ import { ProxyParser } from '../parsers/index.js';
 import { createStableProviderName, deepCopy, tryDecodeSubscriptionLines, decodeBase64 } from '../utils.js';
 import { createTranslator } from '../i18n/index.js';
 import { generateRules, getOutbounds, PREDEFINED_RULE_SETS } from '../config/index.js';
+import { sanitizeCustomProxyGroups, resolveCustomProxyGroupMembers } from './helpers/customProxyGroups.js';
 
 // Names that resolve to built-in outbounds across Clash / Sing-box / Surge.
 // Custom rules whose name collides with these must NOT generate a same-named
@@ -29,6 +30,8 @@ export class BaseConfigBuilder {
         this.config = deepCopy(baseConfig);
         this.customRules = [];
         this.selectedRules = [];
+        this.customProxyGroups = [];     // raw user input; child sets the real value
+        this.customProxyGroupNames = []; // computed in addSelectors()
         this.t = createTranslator(lang);
         this.userAgent = userAgent;
         this.appliedOverrideKeys = new Set();
@@ -374,6 +377,26 @@ export class BaseConfigBuilder {
         // per customRuleSets entry so traffic can be routed to it.
     }
 
+    addCustomProxyGroups(proxyList) {
+        // Default no-op; child classes override to emit user-defined proxy groups.
+    }
+
+    // Names of groups that already exist when custom-group names are computed.
+    // Overridden per platform (Clash/Surge use proxy-groups[].name; sing-box uses
+    // group outbounds[].tag). Default: empty — names only need to avoid built-ins,
+    // which sanitizeCustomProxyGroups already handles via RESERVED_OUTBOUNDS.
+    getExistingGroupNames() {
+        return [];
+    }
+
+    // Map a raw outbound reference to its emitted name: DIRECT/REJECT pass through,
+    // everything else is translated (built-in/rule names resolve to their localized
+    // group name; custom/ruleset names fall through to the literal via the translator).
+    resolveOutboundRef(raw) {
+        if (raw === 'DIRECT' || raw === 'REJECT' || isDeviceOutbound(raw)) return raw;
+        return this.t('outboundNames.' + raw);
+    }
+
     addFallBackGroup(proxyList) {
         throw new Error('addFallBackGroup must be implemented in child class');
     }
@@ -398,6 +421,31 @@ export class BaseConfigBuilder {
         const outbounds = this.getOutboundsList();
         const proxyList = this.getProxyList();
 
+        // Compute the NAMES of custom groups that will actually be emitted, so the
+        // groups below can safely list them as members. We only keep names that are
+        // non-empty under a CONSERVATIVE ref set (real proxies + Node/Auto/Fall Back +
+        // DIRECT/REJECT + other custom names). Since this set is a subset of the
+        // emit-time ref set (addCustomProxyGroups), early-non-empty implies
+        // emit-non-empty — so no member list ever references a dropped (empty) group.
+        // The group OBJECTS are emitted last, after all other groups exist, so their
+        // own references can be validated against every group.
+        const sanitizedCustom = sanitizeCustomProxyGroups(this.customProxyGroups, this.getExistingGroupNames());
+        const earlyRefSet = new Set([
+            ...proxyList,
+            this.t('outboundNames.Node Select'),
+            this.t('outboundNames.Auto Select'),
+            this.t('outboundNames.Fall Back'),
+            ...sanitizedCustom.map(g => g.name),
+            'DIRECT', 'REJECT',
+        ]);
+        // Conservative early resolver: drop DEVICE:xxx so a device-only group is NOT
+        // pre-listed (devices are Surge-only and survive only at emit time). This keeps
+        // early-non-empty ⊆ emit-non-empty on every platform → no dangling member refs.
+        const resolveRef = (raw) => isDeviceOutbound(raw) ? null : this.resolveOutboundRef(raw);
+        this.customProxyGroupNames = sanitizedCustom
+            .filter(g => !resolveCustomProxyGroupMembers(g, { proxyList, resolveRef, validRefSet: earlyRefSet }).empty)
+            .map(g => g.name);
+
         this.addAutoSelectGroup(proxyList);
         this.addNodeSelectGroup(proxyList);
         if (this.groupByCountry) {
@@ -407,6 +455,7 @@ export class BaseConfigBuilder {
         this.addCustomRuleGroups(proxyList);
         this.addCustomRuleSetGroups(proxyList);
         this.addFallBackGroup(proxyList);
+        this.addCustomProxyGroups(proxyList);
 
         // Merge user-defined proxy-groups after system groups are created
         if (this.pendingUserProxyGroups && this.pendingUserProxyGroups.length > 0) {

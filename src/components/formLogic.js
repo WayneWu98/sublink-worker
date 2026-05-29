@@ -234,6 +234,16 @@ export const formLogicFn = (t) => {
                 }
             },
 
+            customProxyGroupNames() {
+                try {
+                    const el = document.querySelector('input[name="customProxyGroups"]');
+                    if (!el || !el.value) return [];
+                    const parsed = JSON.parse(el.value);
+                    if (!Array.isArray(parsed)) return [];
+                    return Array.from(new Set(parsed.map(g => g && g.name).filter(Boolean)));
+                } catch { return []; }
+            },
+
             getSubconverterUrl() {
                 const origin = window.location.origin;
                 const params = new URLSearchParams();
@@ -260,6 +270,15 @@ export const formLogicFn = (t) => {
                     const customRuleSets = customRuleSetsInput && customRuleSetsInput.value ? JSON.parse(customRuleSetsInput.value) : [];
                     if (Array.isArray(customRuleSets) && customRuleSets.length > 0) {
                         params.append('customRuleSets', JSON.stringify(customRuleSets));
+                    }
+                } catch { }
+
+                // Include customProxyGroups when available
+                try {
+                    const customProxyGroupsInput = document.querySelector('input[name="customProxyGroups"]');
+                    const customProxyGroups = customProxyGroupsInput && customProxyGroupsInput.value ? JSON.parse(customProxyGroupsInput.value) : [];
+                    if (Array.isArray(customProxyGroups) && customProxyGroups.length > 0) {
+                        params.append('customProxyGroups', JSON.stringify(customProxyGroups));
                     }
                 } catch { }
 
@@ -439,6 +458,10 @@ export const formLogicFn = (t) => {
                     const customRuleSetsInput = document.querySelector('input[name="customRuleSets"]');
                     const customRuleSets = customRuleSetsInput && customRuleSetsInput.value ? JSON.parse(customRuleSetsInput.value) : [];
 
+                    // Get custom proxy groups from the child component via the hidden input
+                    const customProxyGroupsInput = document.querySelector('input[name="customProxyGroups"]');
+                    const customProxyGroups = customProxyGroupsInput && customProxyGroupsInput.value ? JSON.parse(customProxyGroupsInput.value) : [];
+
                     // Get Surge devices from the child component via the hidden input
                     const surgeDevicesInput = document.querySelector('input[name="surgeDevices"]');
                     const surgeDevices = surgeDevicesInput && surgeDevicesInput.value ? JSON.parse(surgeDevicesInput.value) : [];
@@ -452,6 +475,9 @@ export const formLogicFn = (t) => {
                     params.append('customRules', JSON.stringify(customRules));
                     if (Array.isArray(customRuleSets) && customRuleSets.length > 0) {
                         params.append('customRuleSets', JSON.stringify(customRuleSets));
+                    }
+                    if (Array.isArray(customProxyGroups) && customProxyGroups.length > 0) {
+                        params.append('customProxyGroups', JSON.stringify(customProxyGroups));
                     }
                     if (Array.isArray(surgeDevices) && surgeDevices.length > 0) {
                         params.append('surgeDevices', JSON.stringify(surgeDevices));
@@ -652,6 +678,22 @@ export const formLogicFn = (t) => {
                     }
                 }
 
+                // Extract customProxyGroups before rule sets/rules so their outbound
+                // dropdowns can list the custom group names during validateOutbounds().
+                const customProxyGroups = params.get('customProxyGroups');
+                if (customProxyGroups) {
+                    try {
+                        const parsed = JSON.parse(customProxyGroups);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            window.dispatchEvent(new CustomEvent('restore-custom-proxy-groups', {
+                                detail: { groups: parsed }
+                            }));
+                        }
+                    } catch (e) {
+                        console.warn('Failed to parse customProxyGroups:', e);
+                    }
+                }
+
                 // Extract customRuleSets (after surgeDevices so its outbound dropdown sees devices)
                 const customRuleSets = params.get('customRuleSets');
                 if (customRuleSets) {
@@ -688,7 +730,9 @@ export const formLogicFn = (t) => {
                 this.includeAutoSelect = params.get('include_auto_select') !== 'false';
                 this.enableClashUI = params.get('enable_clash_ui') === 'true';
                 const fbo = params.get('fallback_outbound');
-                if (fbo && ['Node Select', 'DIRECT', 'REJECT'].includes(fbo)) {
+                if (fbo) {
+                    // Accept built-ins and custom proxy group names; the server
+                    // re-validates and falls back to Node Select for unknown targets.
                     this.fallbackOutbound = fbo;
                 }
 
@@ -714,7 +758,7 @@ export const formLogicFn = (t) => {
                 }
 
                 // Expand advanced options if any advanced settings are present
-                if (selectedRules || customRules || customRuleSets || this.groupByCountry || this.enableClashUI ||
+                if (selectedRules || customRules || customRuleSets || customProxyGroups || this.groupByCountry || this.enableClashUI ||
                     externalController || externalUiDownloadUrl || ua || configId) {
                     this.showAdvanced = true;
                 }

@@ -4,6 +4,7 @@ import { BaseConfigBuilder, RESERVED_OUTBOUNDS, isDeviceOutbound } from './BaseC
 import { deepCopy, groupProxiesByCountry } from '../utils.js';
 import { addProxyWithDedup } from './helpers/proxyHelpers.js';
 import { buildSelectorMembers, buildNodeSelectMembers, buildCustomRuleMembers, uniqueNames } from './helpers/groupBuilder.js';
+import { sanitizeCustomProxyGroups, resolveCustomProxyGroupMembers, mapGroupType, isAutoType } from './helpers/customProxyGroups.js';
 import { emitClashRules, sanitizeClashProxyGroups } from './helpers/clashConfigUtils.js';
 import { normalizeGroupName, findGroupIndexByName } from './helpers/groupNameUtils.js';
 import { InvalidConfigError } from '../services/errors.js';
@@ -48,7 +49,7 @@ function getClashUdpValue(proxy, defaultEnabled = true) {
 }
 
 export class ClashConfigBuilder extends BaseConfigBuilder {
-    constructor(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry = false, enableClashUI = false, externalController, externalUiDownloadUrl, includeAutoSelect = true, customRuleSets = [], fallbackOutbound = 'Node Select') {
+    constructor(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry = false, enableClashUI = false, externalController, externalUiDownloadUrl, includeAutoSelect = true, customRuleSets = [], fallbackOutbound = 'Node Select', customProxyGroups = []) {
         if (!baseConfig) {
             baseConfig = CLASH_CONFIG;
         }
@@ -57,6 +58,7 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
         this.customRules = customRules;
         this.customRuleSets = customRuleSets || [];
         this.fallbackOutbound = fallbackOutbound || 'Node Select';
+        this.customProxyGroups = customProxyGroups || [];
         this.countryGroupNames = [];
         this.manualGroupName = null;
         this.enableClashUI = enableClashUI;
@@ -391,7 +393,8 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
             groupByCountry: this.groupByCountry,
             manualGroupName: this.manualGroupName,
             countryGroupNames: this.countryGroupNames,
-            includeAutoSelect: this.shouldIncludeAutoSelectGroup(proxyList)
+            includeAutoSelect: this.shouldIncludeAutoSelectGroup(proxyList),
+            customProxyGroupNames: this.customProxyGroupNames
         });
 
         const group = {
@@ -416,7 +419,8 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
             groupByCountry: this.groupByCountry,
             manualGroupName: this.manualGroupName,
             countryGroupNames: this.countryGroupNames,
-            includeAutoSelect: this.shouldIncludeAutoSelectGroup(proxyList)
+            includeAutoSelect: this.shouldIncludeAutoSelectGroup(proxyList),
+            customProxyGroupNames: this.customProxyGroupNames
         });
     }
 
@@ -458,7 +462,8 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
                         proxyList,
                         translator: this.t,
                         manualGroupName: this.manualGroupName,
-                        includeAutoSelect: this.shouldIncludeAutoSelectGroup(proxyList)
+                        includeAutoSelect: this.shouldIncludeAutoSelectGroup(proxyList),
+                        customProxyGroupNames: this.customProxyGroupNames
                     });
                     const group = {
                         type: "select",
@@ -497,6 +502,40 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
         const raw = item?.outbound || 'Node Select';
         if (raw === 'DIRECT' || raw === 'REJECT') return raw;
         return this.t('outboundNames.' + raw);
+    }
+
+    getExistingGroupNames() {
+        return (this.config['proxy-groups'] || []).map(g => g?.name).filter(Boolean);
+    }
+
+    addCustomProxyGroups(proxyList) {
+        const groups = sanitizeCustomProxyGroups(this.customProxyGroups, this.getExistingGroupNames());
+        if (groups.length === 0) return;
+
+        // Valid resolved member names: real proxies + every emitted group name +
+        // all custom group names (so groups may reference each other) + DIRECT/REJECT.
+        const validRefSet = new Set([
+            ...proxyList,
+            ...this.getExistingGroupNames(),
+            ...groups.map(g => g.name),
+            'DIRECT', 'REJECT'
+        ]);
+        // Clash has no Ponte devices — drop DEVICE:xxx refs.
+        const resolveRef = (raw) => isDeviceOutbound(raw) ? null : this.resolveOutboundRef(raw);
+
+        groups.forEach(g => {
+            if (this.hasProxyGroup(g.name)) return;
+            const { members, empty } = resolveCustomProxyGroupMembers(g, { proxyList, resolveRef, validRefSet });
+            if (empty) return; // drop empty group; refs to it were filtered by validRefSet
+            const nativeType = mapGroupType(g.type, 'clash');
+            const group = { type: nativeType, name: g.name, proxies: members };
+            if (isAutoType(nativeType)) {
+                group.url = g.testUrl;
+                group.interval = g.interval;
+                group.lazy = false;
+            }
+            this.config['proxy-groups'].push(group);
+        });
     }
 
     addFallBackGroup(proxyList) {

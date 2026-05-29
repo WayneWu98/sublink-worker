@@ -120,6 +120,11 @@ export const CustomRules = (props) => {
                             <option x-bind:value="'DEVICE:' + n" x-text="'DEVICE:' + n"></option>
                         </template>
                     </optgroup>
+                    <optgroup label={t('customProxyGroupsSection')} x-show="customProxyGroupNames().length > 0">
+                        <template x-for="n in customProxyGroupNames()" x-bind:key="n">
+                            <option x-bind:value="n" x-text="n"></option>
+                        </template>
+                    </optgroup>
                 </select>
             </div>
 
@@ -329,6 +334,15 @@ export const CustomRules = (props) => {
           } catch { return []; }
         }
 
+        function readSiblingCustomProxyGroups() {
+          const el = document.querySelector('input[name="customProxyGroups"]');
+          if (!el || !el.value) return [];
+          try {
+            const parsed = JSON.parse(el.value);
+            return Array.isArray(parsed) ? parsed : [];
+          } catch { return []; }
+        }
+
         function customRulesData() {
           return {
             mode: 'form',
@@ -339,6 +353,7 @@ export const CustomRules = (props) => {
             // Bumped whenever sibling customRuleSets changes so the dropdown re-renders
             ruleSetsVersion: 0,
             surgeDevicesVersion: 0,
+            customProxyGroupsVersion: 0,
 
             customRuleSetNames() {
               // Reference this.ruleSetsVersion so Alpine treats this as reactive
@@ -353,12 +368,19 @@ export const CustomRules = (props) => {
               return Array.from(new Set(names));
             },
 
+            customProxyGroupNames() {
+              void this.customProxyGroupsVersion;
+              const names = readSiblingCustomProxyGroups().map(g => g && g.name).filter(Boolean);
+              return Array.from(new Set(names));
+            },
+
             isValidOutbound(value) {
               if (!value) return false;
               if (CR_STATIC_OUTBOUND_VALUES.includes(value)) return true;
               const sel = readFormSelectedRules();
               if (sel.includes(value)) return true;
               if (this.customRuleSetNames().includes(value)) return true;
+              if (this.customProxyGroupNames().includes(value)) return true;
               if (typeof value === 'string' && value.startsWith('DEVICE:')) {
                 const name = value.slice(7);
                 if (this.surgeDeviceNames().includes(name)) return true;
@@ -416,6 +438,10 @@ export const CustomRules = (props) => {
               });
               window.addEventListener('surge-devices-changed', () => {
                 this.surgeDevicesVersion++;
+                this.validateOutbounds();
+              });
+              window.addEventListener('custom-proxy-groups-changed', () => {
+                this.customProxyGroupsVersion++;
                 this.validateOutbounds();
               });
             },
