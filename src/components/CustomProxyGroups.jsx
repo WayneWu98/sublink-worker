@@ -158,6 +158,7 @@ export const CustomProxyGroups = (props) => {
                     'Auto Select': ${JSON.stringify(t('outboundNames.Auto Select'))},
                     'Fall Back': ${JSON.stringify(t('outboundNames.Fall Back'))}
                 });
+                const CPG_STATIC = ['Node Select', 'Auto Select', 'Fall Back', 'DIRECT', 'REJECT'];
 
                 const cpgUid = () => (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : 'pg_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2);
 
@@ -199,6 +200,24 @@ export const CustomProxyGroups = (props) => {
                             return Array.from(new Set(out));
                         },
                         memberLabel(v) { return CPG_MEMBER_LABELS[v] || v; },
+                        isValidMember(v, idx) {
+                            if (!v) return false;
+                            if (CPG_STATIC.includes(v)) return true;
+                            if (this.selectedRuleNames().includes(v)) return true;
+                            if (this.customRuleSetNames().includes(v)) return true;
+                            if (typeof v === 'string' && v.indexOf('DEVICE:') === 0 && this.surgeDeviceNames().includes(v.slice(7))) return true;
+                            if (this.otherGroupNames(idx).includes(v)) return true;
+                            return false;
+                        },
+                        // Drop member references whose target was deselected / renamed / deleted.
+                        // Idempotent: only reassigns when something is actually removed (no watch loop).
+                        validateMembers() {
+                            this.groups.forEach((g, i) => {
+                                if (!Array.isArray(g.proxies)) return;
+                                const filtered = g.proxies.filter(v => this.isValidMember(v, i));
+                                if (filtered.length !== g.proxies.length) g.proxies = filtered;
+                            });
+                        },
                         init() {
                             this.$watch('groups', (v) => {
                                 if (this.mode === 'form') this.jsonContent = JSON.stringify(v, (k, val) => k === '__uid' ? undefined : val, 2);
@@ -222,9 +241,11 @@ export const CustomProxyGroups = (props) => {
                                     this.mode = 'json';
                                 }
                             });
-                            // Re-render member options when sibling rule sets / devices change.
-                            window.addEventListener('custom-rulesets-changed', () => this.ruleSetsVersion++);
-                            window.addEventListener('surge-devices-changed', () => this.surgeDevicesVersion++);
+                            // Re-render member options AND prune now-invalid member refs when
+                            // sibling selected-rules / rule-sets / devices change.
+                            window.addEventListener('selected-rules-changed', () => this.validateMembers());
+                            window.addEventListener('custom-rulesets-changed', () => { this.ruleSetsVersion++; this.validateMembers(); });
+                            window.addEventListener('surge-devices-changed', () => { this.surgeDevicesVersion++; this.validateMembers(); });
                         },
                         addGroup() {
                             this.groups.push({
@@ -232,7 +253,7 @@ export const CustomProxyGroups = (props) => {
                                 name: '', type: 'select', proxies: []
                             });
                         },
-                        removeGroup(i) { this.groups.splice(i, 1); },
+                        removeGroup(i) { this.groups.splice(i, 1); this.validateMembers(); },
                         clearAll() {
                             if (!confirm('${t('confirmClearAllRules')}')) return;
                             this.$dispatch('custom-proxy-groups-clear');
