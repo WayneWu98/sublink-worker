@@ -155,6 +155,11 @@ The Fall Back selector's default member (what unmatched traffic uses until the u
 
 ## 🗒️ Changelog
 
+### v2.11.2
+
+- **Fix: a custom proxy group that shares a name with a custom rule / rule set is no longer shadowed.** When a rule routed to a same-named group (e.g. a Surge `DEVICE:` group reached via `DOMAIN-SUFFIX,…,Ponte MacMini`), the auto-generated rule-group claimed the name first and the user's group was dropped as a duplicate — emitting the full node list instead of its declared members. The explicit group now owns the name across Clash / sing-box / Surge; the member resolver is platform-aware, so a device-only group survives on Surge and is correctly empty on Clash/sing-box (where the rule falls back to a node selector).
+- **Change: custom proxy groups are no longer auto-listed as members of the other policy groups.** They previously appeared in Node Select and every rule group's option list. They now stand alone — still usable as routing targets in Custom Rules / Custom RuleSets, and, when explicitly chosen, as the Fall Back / rule-set default (where a select group must list its default).
+
 ### v2.11.1
 
 - **Fix: custom proxy groups now drop member references whose target was removed.** A member pointing at a selected rule / custom rule set / Surge device / another custom group lingered as a stale chip after that target was deselected, renamed, or deleted. Output was already correct (the server drops unknown references at build time); this fixes the lingering UI state. The form now prunes invalid members when those sections change, matching Custom Rules / Custom RuleSets.
