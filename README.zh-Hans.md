@@ -155,6 +155,10 @@ Sing-Box · Clash · Xray/V2Ray · Surge
 
 ## 🗒️ 更新日志
 
+### v2.11.1
+
+- **修复:自定义策略组会清理失效的成员引用。** 当成员引用的「选中规则 / 自定义规则集 / Surge 设备 / 其它自定义组」被取消选中、改名或删除后,原本会残留一个失效标签(输出本就正确 —— 服务端在构建时会丢弃未知引用 —— 这里修的是残留的 UI 状态)。表单现在会在这些区块变化时清理失效成员,与「自定义规则 / 自定义规则集」行为一致。
+
 ### v2.11.0
 
 - **自定义策略组。** 表单新增一个区块,可自定义命名策略组:选择类型(`select` / `url-test` / `fallback` / `load-balance`),成员从已有组里选 —— 节点选择(=全部节点)、自动选择、地区 / 规则 / 规则集组、Surge(Ponte)设备、其它自定义组 —— 以及 DIRECT/REJECT。成员只用「引用」:有「节点选择」即代表全部节点,所以不做节点名正则、也不暴露每组测试 URL 配置(与内置的自动选择保持一致)。服务端校验并产出,三端(Clash / mihomo / sing-box / Surge)一致;无原生支持的类型自动降级(sing-box 的 `fallback`/`load-balance` → `urltest`;Surge 的 `load-balance` → `url-test`)。自定义组是「自定义规则」「自定义规则集」「漏网之鱼」的一等出站目标。`DEVICE:` 设备成员在 Surge 保留、在 Clash/sing-box 丢弃(它们没有 Ponte)。分享链接新增 `customProxyGroups` 参数,并支持短码 /「Load from Code」恢复。

@@ -155,6 +155,10 @@ The Fall Back selector's default member (what unmatched traffic uses until the u
 
 ## 🗒️ Changelog
 
+### v2.11.1
+
+- **Fix: custom proxy groups now drop member references whose target was removed.** A member pointing at a selected rule / custom rule set / Surge device / another custom group lingered as a stale chip after that target was deselected, renamed, or deleted. Output was already correct (the server drops unknown references at build time); this fixes the lingering UI state. The form now prunes invalid members when those sections change, matching Custom Rules / Custom RuleSets.
+
 ### v2.11.0
 
 - **Custom proxy groups (自定义策略组).** New form section to define named policy groups with a chosen type (`select` / `url-test` / `fallback` / `load-balance`) and members selected from existing groups — Node Select (= all nodes), Auto Select, region / rule / rule-set groups, Surge (Ponte) devices, other custom groups — plus DIRECT/REJECT. Members are references only; "Node Select" covers "all nodes" so there is no node-name regex and no per-group test-URL config (parity with the built-in Auto Select). Groups are validated and emitted server-side and stay consistent across Clash / mihomo / sing-box / Surge: types with no native equivalent degrade to the closest auto type (sing-box `fallback`/`load-balance` → `urltest`; Surge `load-balance` → `url-test`). Custom groups are first-class outbound targets in Custom Rules, Custom RuleSets and the Fall Back selector. `DEVICE:` members are kept on Surge and dropped on Clash/sing-box (they have no Ponte). New `customProxyGroups` share-URL parameter, including short-code / "Load from Code" restore.
