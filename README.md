@@ -155,6 +155,10 @@ The Fall Back selector's default member (what unmatched traffic uses until the u
 
 ## 🗒️ Changelog
 
+### v2.11.3
+
+- **Fix: `CONFIG_TTL_SECONDS=0` now stores saved configs permanently (never expire).** The Node runtime coerced `0` to `undefined` via `||`, so it silently fell back to the 30-day default and permanent storage was unreachable through configuration. It now uses `??`, letting `0` pass through to the KV layer, which writes the key without an expiry. Unset still defaults to 30 days.
+
 ### v2.11.2
 
 - **Fix: a custom proxy group that shares a name with a custom rule / rule set is no longer shadowed.** When a rule routed to a same-named group (e.g. a Surge `DEVICE:` group reached via `DOMAIN-SUFFIX,…,Ponte MacMini`), the auto-generated rule-group claimed the name first and the user's group was dropped as a duplicate — emitting the full node list instead of its declared members. The explicit group now owns the name across Clash / sing-box / Surge; the member resolver is platform-aware, so a device-only group survives on Surge and is correctly empty on Clash/sing-box (where the rule falls back to a node selector).
