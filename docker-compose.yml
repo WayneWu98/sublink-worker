@@ -9,6 +9,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_KEY_PREFIX: sublink
+      # Saved-config TTL in seconds (default 30 days). Set to 0 to store configs permanently (never expire).
       CONFIG_TTL_SECONDS: 2592000
     depends_on:
       - redis
