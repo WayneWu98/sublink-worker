@@ -155,6 +155,10 @@ The Fall Back selector's default member (what unmatched traffic uses until the u
 
 ## 🗒️ Changelog
 
+### v2.11.4
+
+- **Fix: proxy names that are prefixes of other names are no longer treated as duplicates.** For example, importing `VMESS_OVER_WS_CDN` before `VMESS_OVER_WS` incorrectly renamed the latter to `VMESS_OVER_WS 2` because deduplication used a substring match. Names now receive a numeric suffix only when the exact name is already occupied, with the next available suffix selected consistently across sing-box, Clash, and Surge output.
+
 ### v2.11.3
 
 - **Fix: `CONFIG_TTL_SECONDS=0` now stores saved configs permanently (never expire).** The Node runtime coerced `0` to `undefined` via `||`, so it silently fell back to the 30-day default and permanent storage was unreachable through configuration. It now uses `??`, letting `0` pass through to the KV layer, which writes the key without an expiry. Unset still defaults to 30 days.
