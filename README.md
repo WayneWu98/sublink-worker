@@ -155,6 +155,10 @@ The Fall Back selector's default member (what unmatched traffic uses until the u
 
 ## 🗒️ Changelog
 
+### v2.11.5
+
+- **Fix: preserve the remaining Surge base-profile sections and syntax during conversion.** `[Ponte]` is now a first-class passthrough section, while other static, named, or future sections (such as `[Body Rewrite]`, `[WireGuard <name>]`, and `[Ruleset <name>]`) retain their original header and configuration lines instead of being silently dropped. Surge directives such as `#!include` and start-of-line `#!REQUIREMENT` are preserved. Raw `[General]` / `[Replica]` lines round-trip without losing quotes, leading zeroes, or escapes. `#`, `;`, and `//` comments remain valid in `[Proxy]` output but are excluded from every generated proxy group.
+
 ### v2.11.4
 
 - **Fix: proxy names that are prefixes of other names are no longer treated as duplicates.** For example, importing `VMESS_OVER_WS_CDN` before `VMESS_OVER_WS` incorrectly renamed the latter to `VMESS_OVER_WS 2` because deduplication used a substring match. Names now receive a numeric suffix only when the exact name is already occupied, with the next available suffix selected consistently across sing-box, Clash, and Surge output.

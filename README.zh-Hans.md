@@ -155,6 +155,10 @@ Sing-Box · Clash · Xray/V2Ray · Surge
 
 ## 🗒️ 更新日志
 
+### v2.11.5
+
+- **修复:Surge 基础配置转换会完整保留其余段落与配置语法。** `[Ponte]` 现在作为正式透传段落处理;其它静态、命名或未来新增段落(如 `[Body Rewrite]`、`[WireGuard <name>]`、`[Ruleset <name>]`)会保留原始段名与配置行,不再静默丢失。`#!include`、行首 `#!REQUIREMENT` 等 Surge 指令会原样保留;`[General]` / `[Replica]` 使用原始行往返,不会再破坏引号、前导零或转义字符。`[Proxy]` 中的 `#`、`;`、`//` 注释仍会出现在输出里,但不会混入任何自动生成的策略组。
+
 ### v2.11.4
 
 - **修复:名称互为前缀的代理节点不再被误判为重名。** 例如先导入 `VMESS_OVER_WS_CDN`、再导入 `VMESS_OVER_WS` 时,去重逻辑此前因使用子串匹配而把后者错误改成 `VMESS_OVER_WS 2`。现在只有名称被精确占用时才追加数字后缀,并选择下一个可用编号;sing-box、Clash 与 Surge 输出行为保持一致。
