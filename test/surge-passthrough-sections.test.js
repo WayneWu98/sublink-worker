@@ -16,6 +16,64 @@ async function buildAndExtractSection(baseConfig, sectionName) {
 }
 
 describe('SurgeConfigBuilder — passthrough sections from base config', () => {
+    it('emits raw [General] and [Replica] lines without changing quotes', async () => {
+        const base = {
+            general: { 'leading-zero': 1 },
+            'general-lines': [
+                'leading-zero = "001"',
+                'quoted = "a quoted value: \\"text\\"; path: C:\\\\Proxy"',
+                '#!include General.dconf'
+            ],
+            replica: { enabled: false },
+            'replica-lines': ['enabled = "false"']
+        };
+
+        expect(await buildAndExtractSection(base, 'General')).toEqual(base['general-lines']);
+        expect(await buildAndExtractSection(base, 'Replica')).toEqual(base['replica-lines']);
+    });
+
+    it('emits proxy comments and directives without adding them to groups', async () => {
+        const base = {
+            general: {},
+            proxies: [
+                '# hash note',
+                '; semicolon note',
+                '// slash note',
+                '#!include Proxy.dconf',
+                'Base = http, 127.0.0.1, 8080'
+            ]
+        };
+        const builder = new SurgeConfigBuilder(
+            SAMPLE, ['Non-China'], [], base, 'en', '', false, true, []
+        );
+        const text = await builder.build();
+        const proxyLines = await buildAndExtractSection(base, 'Proxy');
+        const proxyGroups = text.match(/\[Proxy Group\]\n([\s\S]*?)(?=\n\[|$)/)?.[1] || '';
+
+        expect(proxyLines).toEqual(expect.arrayContaining(base.proxies));
+        expect(proxyGroups).not.toContain('# hash note');
+        expect(proxyGroups).not.toContain('; semicolon note');
+        expect(proxyGroups).not.toContain('// slash note');
+        expect(proxyGroups).not.toContain('#!include Proxy.dconf');
+        expect(proxyGroups).toContain('Base');
+    });
+
+    it('uses object-form General when an input config overrides the base', async () => {
+        const base = {
+            general: { value: 1 },
+            'general-lines': ['value = "001"']
+        };
+        const builder = new SurgeConfigBuilder(
+            SAMPLE, ['Non-China'], [], base, 'en', '', false, true, []
+        );
+        builder.applyConfigOverrides({ general: { value: 'override' } });
+
+        const text = await builder.build();
+
+        expect(text).toContain('value = override');
+        expect(text).not.toContain('value = "001"');
+    });
+
     it('emits [Host] section with raw lines', async () => {
         const base = {
             general: {},
@@ -70,6 +128,32 @@ describe('SurgeConfigBuilder — passthrough sections from base config', () => {
         };
         const lines = await buildAndExtractSection(base, 'SSID Setting');
         expect(lines[0]).toContain('FreeWiFi');
+    });
+
+    it('emits [Ponte] section', async () => {
+        const base = {
+            general: {},
+            ponte: [
+                'client-proxy-name = Relay-Proxy',
+                'server-proxy-name = Proxy-A, Proxy-B'
+            ]
+        };
+        const lines = await buildAndExtractSection(base, 'Ponte');
+        expect(lines).toEqual([
+            'client-proxy-name = Relay-Proxy',
+            'server-proxy-name = Proxy-A, Proxy-B'
+        ]);
+    });
+
+    it('emits named or future passthrough sections', async () => {
+        const base = {
+            general: {},
+            'passthrough-sections': [
+                { name: 'WireGuard Home', lines: ['private-key = example'] }
+            ]
+        };
+        const lines = await buildAndExtractSection(base, 'WireGuard Home');
+        expect(lines).toEqual(['private-key = example']);
     });
 
     it('does not emit empty passthrough sections', async () => {

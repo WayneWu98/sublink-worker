@@ -1,3 +1,5 @@
+import { isSurgeCommentLine } from '../utils/surgeConfigParser.js';
+
 /**
  * Parse Surge proxy line format and convert to internal (Sing-Box) format
  * 
@@ -52,7 +54,7 @@ export function convertSurgeProxyToObject(line) {
     if (!line || typeof line !== 'string') return null;
 
     const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith(';')) {
+    if (!trimmed || isSurgeCommentLine(trimmed)) {
         return null;
     }
 

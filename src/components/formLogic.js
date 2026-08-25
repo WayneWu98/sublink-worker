@@ -12,6 +12,12 @@ export const formLogicFn = (t) => {
             return unquoted;
         };
 
+        const isSurgeCommentLine = (value) => {
+            if (typeof value !== 'string') return false;
+            const line = value.trimStart();
+            return line.startsWith('#') || line.startsWith(';') || line.startsWith('//');
+        };
+
         // Mirrors SURGE_PASSTHROUGH_SECTIONS in src/utils/surgeConfigParser.js.
         const SURGE_PASSTHROUGH_SECTIONS = [
             { iniKey: 'host', storeKey: 'host' },
@@ -19,8 +25,14 @@ export const formLogicFn = (t) => {
             { iniKey: 'header rewrite', storeKey: 'header-rewrite' },
             { iniKey: 'mitm', storeKey: 'mitm' },
             { iniKey: 'script', storeKey: 'script' },
-            { iniKey: 'ssid setting', storeKey: 'ssid-setting' }
+            { iniKey: 'ssid setting', storeKey: 'ssid-setting' },
+            { iniKey: 'ponte', storeKey: 'ponte' }
         ];
+        const SURGE_EXTRA_SECTIONS_KEY = 'passthrough-sections';
+        const SURGE_RAW_SECTION_LINES = {
+            general: 'general-lines',
+            replica: 'replica-lines'
+        };
         const PASSTHROUGH_BY_INI_KEY = new Map(SURGE_PASSTHROUGH_SECTIONS.map(s => [s.iniKey, s]));
 
         const convertSurgeIniToJson = (content) => {
@@ -37,7 +49,7 @@ export const formLogicFn = (t) => {
             };
             for (const rawLine of lines) {
                 const line = rawLine.trim();
-                if (!line || line.startsWith(';') || line.startsWith('#')) continue;
+                if (!line) continue;
                 const sectionMatch = line.match(/^\[(.+)]$/);
                 if (sectionMatch) {
                     currentSection = sectionMatch[1].trim();
@@ -46,6 +58,8 @@ export const formLogicFn = (t) => {
                 if (!currentSection) continue;
                 const sectionName = currentSection.toLowerCase();
                 if (sectionName === 'general' || sectionName === 'replica') {
+                    ensureArray(SURGE_RAW_SECTION_LINES[sectionName]).push(line);
+                    if (isSurgeCommentLine(line)) continue;
                     const equalsIndex = line.indexOf('=');
                     if (equalsIndex === -1) continue;
                     const key = line.slice(0, equalsIndex).trim();
@@ -62,7 +76,13 @@ export const formLogicFn = (t) => {
                 } else if (PASSTHROUGH_BY_INI_KEY.has(sectionName)) {
                     ensureArray(PASSTHROUGH_BY_INI_KEY.get(sectionName).storeKey).push(line);
                 } else {
-                    ensureArray(sectionName).push(line);
+                    const sections = ensureArray(SURGE_EXTRA_SECTIONS_KEY);
+                    let section = sections.find(item => item.name === currentSection);
+                    if (!section) {
+                        section = { name: currentSection, lines: [] };
+                        sections.push(section);
+                    }
+                    section.lines.push(line);
                 }
             }
             if (!hasRecognizedSurgeKey(config)) {
@@ -72,7 +92,8 @@ export const formLogicFn = (t) => {
         };
 
         const RECOGNIZED_SURGE_KEYS = ['general', 'replica', 'proxies', 'proxy-groups', 'rules',
-            ...SURGE_PASSTHROUGH_SECTIONS.map(s => s.storeKey)];
+            ...SURGE_PASSTHROUGH_SECTIONS.map(s => s.storeKey), SURGE_EXTRA_SECTIONS_KEY,
+            ...Object.values(SURGE_RAW_SECTION_LINES)];
 
         const hasRecognizedSurgeKey = (config) => {
             if (!config || typeof config !== 'object' || Array.isArray(config)) return false;
@@ -90,7 +111,7 @@ export const formLogicFn = (t) => {
             } catch {}
             if (isJson) {
                 if (!hasRecognizedSurgeKey(parsedJson)) {
-                    throw new Error('Surge JSON config must contain at least one recognized section (general, replica, proxies, proxy-groups, rules, host, url-rewrite, header-rewrite, mitm, script, ssid-setting)');
+                    throw new Error('Surge JSON config must contain at least one recognized section');
                 }
                 return { configObject: parsedJson, convertedFromIni: false };
             }

@@ -80,6 +80,7 @@ FINAL,DIRECT
         it('should return null for invalid lines', () => {
             expect(convertSurgeProxyToObject('')).toBeNull();
             expect(convertSurgeProxyToObject('# comment')).toBeNull();
+            expect(convertSurgeProxyToObject('// Example = ss, server.example.com, 443, encrypt-method=aes-128-gcm, password=test')).toBeNull();
             expect(convertSurgeProxyToObject('invalid line')).toBeNull();
             expect(convertSurgeProxyToObject('DIRECT = direct')).toBeNull();
         });

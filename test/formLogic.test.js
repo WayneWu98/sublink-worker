@@ -33,6 +33,56 @@ describe('formLogic toString fix', () => {
     expect(data.showAdvanced).toBe(false);
   });
 
+  it('preserves Ponte when saving an INI Surge base config', async () => {
+    const requests = [];
+    const fakeWindow = {
+      APP_TRANSLATIONS: { saveConfigSuccess: 'Saved' },
+      PREDEFINED_RULE_SETS: {},
+      location: { href: 'https://example.com/', search: '' },
+      history: { replaceState() {} }
+    };
+    const fakeFetch = async (url, options) => {
+      requests.push({ url, options });
+      return { ok: true, text: async () => 'surge_test' };
+    };
+    const fn = new Function(
+      'window',
+      'fetch',
+      'alert',
+      '(' + formLogicFn.toString() + ')(); return window;'
+    );
+    const result = fn(fakeWindow, fakeFetch, () => {});
+    const data = result.formData();
+    data.configType = 'surge';
+    data.configEditor = [
+      '[General]',
+      'leading-zero = "001"',
+      '#!include General.dconf',
+      '',
+      '[Ponte]',
+      'client-proxy-name = Relay-Proxy',
+      '',
+      '[WireGuard Home]',
+      'private-key = example'
+    ].join('\n');
+
+    await data.saveBaseConfig();
+
+    expect(requests).toHaveLength(1);
+    const requestBody = JSON.parse(requests[0].options.body);
+    const savedConfig = JSON.parse(requestBody.content);
+    expect(savedConfig['general-lines']).toEqual([
+      'leading-zero = "001"',
+      '#!include General.dconf'
+    ]);
+    expect(savedConfig.ponte).toEqual([
+      'client-proxy-name = Relay-Proxy'
+    ]);
+    expect(savedConfig['passthrough-sections']).toEqual([
+      { name: 'WireGuard Home', lines: ['private-key = example'] }
+    ]);
+  });
+
   it('no longer contains the short-URL auto-parse branch', () => {
     const fnString = formLogicFn.toString();
     expect(fnString).not.toMatch(/\/\^\\\/\(\[bcxs\]\)\\\/\(\[a-zA-Z0-9_-\]\+\)\$/);

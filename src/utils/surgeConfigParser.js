@@ -11,6 +11,12 @@ function parseSurgeValue(rawValue = '') {
     return unquoted;
 }
 
+export function isSurgeCommentLine(value) {
+    if (typeof value !== 'string') return false;
+    const line = value.trimStart();
+    return line.startsWith('#') || line.startsWith(';') || line.startsWith('//');
+}
+
 // Sections that are stored verbatim (one raw line per entry) and emitted back
 // in the same form. The map key is the lowercase section header found in the
 // INI ("url rewrite"); the value is the storage key used in the parsed object
@@ -21,8 +27,15 @@ export const SURGE_PASSTHROUGH_SECTIONS = [
     { iniKey: 'header rewrite', storeKey: 'header-rewrite', display: 'Header Rewrite' },
     { iniKey: 'mitm', storeKey: 'mitm', display: 'MITM' },
     { iniKey: 'script', storeKey: 'script', display: 'Script' },
-    { iniKey: 'ssid setting', storeKey: 'ssid-setting', display: 'SSID Setting' }
+    { iniKey: 'ssid setting', storeKey: 'ssid-setting', display: 'SSID Setting' },
+    { iniKey: 'ponte', storeKey: 'ponte', display: 'Ponte' }
 ];
+
+export const SURGE_EXTRA_SECTIONS_KEY = 'passthrough-sections';
+export const SURGE_RAW_SECTION_LINES = {
+    general: 'general-lines',
+    replica: 'replica-lines'
+};
 
 const PASSTHROUGH_BY_INI_KEY = new Map(
     SURGE_PASSTHROUGH_SECTIONS.map(s => [s.iniKey, s])
@@ -45,9 +58,7 @@ export function convertSurgeIniToJson(content) {
 
     for (const rawLine of lines) {
         const line = rawLine.trim();
-        if (!line || line.startsWith(';') || line.startsWith('#')) {
-            continue;
-        }
+        if (!line) continue;
         const sectionMatch = line.match(/^\[(.+)]$/);
         if (sectionMatch) {
             currentSection = sectionMatch[1].trim();
@@ -58,6 +69,8 @@ export function convertSurgeIniToJson(content) {
         }
         const sectionName = currentSection.toLowerCase();
         if (sectionName === 'general' || sectionName === 'replica') {
+            ensureArray(SURGE_RAW_SECTION_LINES[sectionName]).push(line);
+            if (isSurgeCommentLine(line)) continue;
             const equalsIndex = line.indexOf('=');
             if (equalsIndex === -1) continue;
             const key = line.slice(0, equalsIndex).trim();
@@ -74,7 +87,13 @@ export function convertSurgeIniToJson(content) {
         } else if (PASSTHROUGH_BY_INI_KEY.has(sectionName)) {
             ensureArray(PASSTHROUGH_BY_INI_KEY.get(sectionName).storeKey).push(line);
         } else {
-            ensureArray(sectionName).push(line);
+            const sections = ensureArray(SURGE_EXTRA_SECTIONS_KEY);
+            let section = sections.find(item => item.name === currentSection);
+            if (!section) {
+                section = { name: currentSection, lines: [] };
+                sections.push(section);
+            }
+            section.lines.push(line);
         }
     }
 
@@ -86,7 +105,8 @@ export function convertSurgeIniToJson(content) {
 }
 
 const RECOGNIZED_SURGE_KEYS = ['general', 'replica', 'proxies', 'proxy-groups', 'rules',
-    ...SURGE_PASSTHROUGH_SECTIONS.map(s => s.storeKey)];
+    ...SURGE_PASSTHROUGH_SECTIONS.map(s => s.storeKey), SURGE_EXTRA_SECTIONS_KEY,
+    ...Object.values(SURGE_RAW_SECTION_LINES)];
 
 function hasRecognizedSurgeKey(config) {
     if (!config || typeof config !== 'object' || Array.isArray(config)) return false;
@@ -108,7 +128,7 @@ export function parseSurgeConfigInput(content) {
     }
     if (isJson) {
         if (!hasRecognizedSurgeKey(parsedJson)) {
-            throw new Error('Surge JSON config must contain at least one recognized section (general, replica, proxies, proxy-groups, rules, host, url-rewrite, header-rewrite, mitm, script, ssid-setting)');
+            throw new Error('Surge JSON config must contain at least one recognized section');
         }
         return { configObject: parsedJson, convertedFromIni: false };
     }

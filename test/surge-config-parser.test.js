@@ -66,6 +66,63 @@ quoted = "Text Value"
         expect(converted.general.quoted).toBe('Text Value');
     });
 
+    it('preserves raw [General] and [Replica] lines', () => {
+        const iniContent = `
+[General]
+quoted = "a quoted value: \\"text\\"; path: C:\\\\Proxy"
+leading-zero = "001"
+#!include General.dconf
+#!REQUIREMENT SYSTEM=='macOS' conditional = "value"
+
+[Replica]
+quoted-boolean = "false"
+`;
+
+        const converted = convertSurgeIniToJson(iniContent);
+
+        expect(converted['general-lines']).toEqual([
+            'quoted = "a quoted value: \\"text\\"; path: C:\\\\Proxy"',
+            'leading-zero = "001"',
+            '#!include General.dconf',
+            '#!REQUIREMENT SYSTEM==\'macOS\' conditional = "value"'
+        ]);
+        expect(converted['replica-lines']).toEqual(['quoted-boolean = "false"']);
+    });
+
+    it('preserves directives and comments in line-based sections', () => {
+        const iniContent = `
+[Proxy]
+// proxy note
+#!include Proxy.dconf
+Base = http, 127.0.0.1, 8080
+
+[Host]
+; host note
+#!include Hosts.dconf
+base.example = 127.0.0.1
+
+[Body Rewrite]
+#!REQUIREMENT SYSTEM=='macOS' http-response ^https://example.com reject-dict
+`;
+
+        const converted = convertSurgeIniToJson(iniContent);
+
+        expect(converted.proxies).toEqual([
+            '// proxy note',
+            '#!include Proxy.dconf',
+            'Base = http, 127.0.0.1, 8080'
+        ]);
+        expect(converted.host).toEqual([
+            '; host note',
+            '#!include Hosts.dconf',
+            'base.example = 127.0.0.1'
+        ]);
+        expect(converted['passthrough-sections']).toEqual([{
+            name: 'Body Rewrite',
+            lines: ["#!REQUIREMENT SYSTEM=='macOS' http-response ^https://example.com reject-dict"]
+        }]);
+    });
+
     it('throws when content cannot be parsed as JSON or recognized INI', () => {
         expect(() => parseSurgeConfigInput('invalid content without sections')).toThrow();
     });
@@ -75,6 +132,24 @@ quoted = "Text Value"
         const { configObject, convertedFromIni } = parseSurgeConfigInput(ini);
         expect(convertedFromIni).toBe(true);
         expect(configObject.host).toEqual(['*.company.ponte = 127.0.0.1']);
+    });
+
+    it('accepts a config that contains only [Ponte]', () => {
+        const ini = `[Ponte]\nclient-proxy-name = Relay-Proxy\nserver-proxy-name = Proxy-A, Proxy-B\n`;
+        const { configObject, convertedFromIni } = parseSurgeConfigInput(ini);
+        expect(convertedFromIni).toBe(true);
+        expect(configObject.ponte).toEqual([
+            'client-proxy-name = Relay-Proxy',
+            'server-proxy-name = Proxy-A, Proxy-B'
+        ]);
+    });
+
+    it('preserves named or future sections with their original header', () => {
+        const ini = `[WireGuard Home]\nprivate-key = example\n`;
+        const { configObject } = parseSurgeConfigInput(ini);
+        expect(configObject['passthrough-sections']).toEqual([
+            { name: 'WireGuard Home', lines: ['private-key = example'] }
+        ]);
     });
 
     it('accepts a config with multiple passthrough sections', () => {
@@ -119,6 +194,13 @@ example-script = type=http-response,pattern=^https://example\\.com,script-path=f
         const { configObject, convertedFromIni } = parseSurgeConfigInput(json);
         expect(convertedFromIni).toBe(false);
         expect(configObject.host).toEqual(['*.company.ponte = 127.0.0.1']);
+    });
+
+    it('accepts a JSON-format Surge config with a Ponte field', () => {
+        const json = JSON.stringify({ ponte: ['client-proxy-name = Relay-Proxy'] });
+        const { configObject, convertedFromIni } = parseSurgeConfigInput(json);
+        expect(convertedFromIni).toBe(false);
+        expect(configObject.ponte).toEqual(['client-proxy-name = Relay-Proxy']);
     });
 
     it('rejects empty JSON object (no recognized Surge sections)', () => {

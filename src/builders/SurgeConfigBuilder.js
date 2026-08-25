@@ -5,6 +5,7 @@ import { resolveCustomRuleSetUrl } from '../config/ruleGenerators.js';
 import { addProxyWithDedup } from './helpers/proxyHelpers.js';
 import { buildSelectorMembers, buildNodeSelectMembers, buildCustomRuleMembers, uniqueNames } from './helpers/groupBuilder.js';
 import { sanitizeCustomProxyGroups, resolveCustomProxyGroupMembers, mapGroupType, isAutoType } from './helpers/customProxyGroups.js';
+import { isSurgeCommentLine, SURGE_EXTRA_SECTIONS_KEY, SURGE_PASSTHROUGH_SECTIONS, SURGE_RAW_SECTION_LINES } from '../utils/surgeConfigParser.js';
 
 export class SurgeConfigBuilder extends BaseConfigBuilder {
     constructor(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry, includeAutoSelect = true, customRuleSets = [], fallbackOutbound = 'Node Select', customProxyGroups = []) {
@@ -47,7 +48,7 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
      */
     getValidProxies() {
         return this.getProxies().filter(proxy =>
-            typeof proxy === 'string' && !proxy.trimStart().startsWith('#')
+            typeof proxy === 'string' && !isSurgeCommentLine(proxy)
         );
     }
 
@@ -484,17 +485,27 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
         }
 
         finalConfig.push('[General]');
-        if (this.config.general) {
+        const generalLines = this.config[SURGE_RAW_SECTION_LINES.general];
+        const useGeneralLines = Array.isArray(generalLines) && !this.hasConfigOverride('general');
+        if (useGeneralLines) {
+            finalConfig.push(...generalLines);
+        } else if (this.config.general) {
             Object.entries(this.config.general).forEach(([key, value]) => {
                 finalConfig.push(`${key} = ${value}`);
             });
         }
 
-        if (this.config.replica) {
+        const replicaLines = this.config[SURGE_RAW_SECTION_LINES.replica];
+        const useReplicaLines = Array.isArray(replicaLines) && !this.hasConfigOverride('replica');
+        if (useReplicaLines || this.config.replica) {
             finalConfig.push('\n[Replica]');
-            Object.entries(this.config.replica).forEach(([key, value]) => {
-                finalConfig.push(`${key} = ${value}`);
-            });
+            if (useReplicaLines) {
+                finalConfig.push(...replicaLines);
+            } else {
+                Object.entries(this.config.replica).forEach(([key, value]) => {
+                    finalConfig.push(`${key} = ${value}`);
+                });
+            }
         }
 
         finalConfig.push('\n[Proxy]');
@@ -596,22 +607,30 @@ export class SurgeConfigBuilder extends BaseConfigBuilder {
 
         finalConfig.push('FINAL,' + this.t('outboundNames.Fall Back'));
 
-        // Passthrough sections from a user-supplied base config (Host, URL Rewrite,
-        // Header Rewrite, MITM, Script, SSID Setting). Each is stored as an array
-        // of raw lines, emitted verbatim in canonical Surge order.
-        const passthroughOut = [
-            { storeKey: 'host', display: 'Host' },
-            { storeKey: 'url-rewrite', display: 'URL Rewrite' },
-            { storeKey: 'header-rewrite', display: 'Header Rewrite' },
-            { storeKey: 'mitm', display: 'MITM' },
-            { storeKey: 'script', display: 'Script' },
-            { storeKey: 'ssid-setting', display: 'SSID Setting' }
-        ];
-        for (const { storeKey, display } of passthroughOut) {
+        // Passthrough sections from a user-supplied base config. Known sections
+        // use canonical names; named/future sections retain their original name.
+        const emittedSectionNames = new Set();
+        for (const { storeKey, display } of SURGE_PASSTHROUGH_SECTIONS) {
             const lines = this.config[storeKey];
             if (!Array.isArray(lines) || lines.length === 0) continue;
             finalConfig.push(`\n[${display}]`);
             finalConfig.push(...lines);
+            emittedSectionNames.add(display.toLowerCase());
+        }
+
+        const extraSections = this.config[SURGE_EXTRA_SECTIONS_KEY];
+        if (Array.isArray(extraSections)) {
+            for (const section of extraSections) {
+                const name = typeof section?.name === 'string' ? section.name.trim() : '';
+                const lines = Array.isArray(section?.lines)
+                    ? section.lines.filter(line => typeof line === 'string')
+                    : [];
+                if (!name || /[\r\n]/.test(name) || lines.length === 0) continue;
+                if (emittedSectionNames.has(name.toLowerCase())) continue;
+                finalConfig.push(`\n[${name}]`);
+                finalConfig.push(...lines);
+                emittedSectionNames.add(name.toLowerCase());
+            }
         }
 
         return finalConfig.join('\n');
